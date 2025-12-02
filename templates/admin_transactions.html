@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Transacciones - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <div class="container py-4">
+      <div class="d-flex justify-content-between align-items-center">
+        <a href="/admin">← Volver al admin</a>
+        <div>
+          {% if current_user %}
+            <span class="me-2">{{ current_user.username }} ({{ current_user.role }})</span>
+            <a class="btn btn-sm btn-outline-secondary" href="/logout">Cerrar sesión</a>
+          {% else %}
+            <a class="btn btn-sm btn-primary" href="/login">Login</a>
+          {% endif %}
+        </div>
+      </div>
+      
+      <div class="d-flex justify-content-between align-items-center mt-3">
+        <h2 class="mb-0">Histórico de Transacciones</h2>
+        <a href="{{ url_for('admin.admin_transactions', format='csv') }}" 
+           class="btn btn-outline-success">
+          Exportar CSV
+        </a>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ category }}">{{ msg }}</div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <div class="card mb-3">
+        <div class="card-body">
+          <form method="get" class="row g-3">
+            <div class="col-md-3">
+              <label class="form-label">Tipo</label>
+              <select name="kind" class="form-select">
+                <option value="">Todos</option>
+                <option value="buy" {% if kind == 'buy' %}selected{% endif %}>Compra</option>
+                <option value="rent" {% if kind == 'rent' %}selected{% endif %}>Renta</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Estado Renta</label>
+              <select name="returned" class="form-select">
+                <option value="">Todos</option>
+                <option value="false" {% if returned == False %}selected{% endif %}>En préstamo</option>
+                <option value="true" {% if returned == True %}selected{% endif %}>Devuelto</option>
+              </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <div class="form-check">
+                <input type="checkbox" class="form-check-input" name="overdue" value="true" 
+                       id="overdueCheck" {% if overdue %}checked{% endif %}>
+                <label class="form-check-label" for="overdueCheck">
+                  Solo Vencidos
+                </label>
+              </div>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+              <button type="submit" class="btn btn-primary">Filtrar</button>
+              {% if request.args %}
+                <a href="{{ url_for('admin.admin_transactions') }}" class="btn btn-outline-secondary ms-2">
+                  Limpiar
+                </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-striped table-hover">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Usuario</th>
+              <th>Artículo</th>
+              <th>Tipo</th>
+              <th>Cantidad</th>
+              <th>Días</th>
+              <th>Fecha Inicio</th>
+              <th>Vencimiento</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in transactions %}
+              <tr>
+                <td>{{ tx.id }}</td>
+                <td>
+                  {% if tx.user_obj %}
+                    <span title="{{ tx.user_obj.email or tx.user_obj.username }}">
+                      {{ tx.user_obj.username or tx.user_obj.email }}
+                    </span>
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+                <td>{{ tx.item.name }}</td>
+                <td>{{ tx.kind }}</td>
+                <td>{{ tx.qty }}</td>
+                <td>{{ tx.rent_days if tx.kind == 'rent' else '-' }}</td>
+                <td>{{ tx.rent_start_date.strftime('%Y-%m-%d') if tx.rent_start_date else '-' }}</td>
+                <td>
+                  {% if tx.kind == 'rent' %}
+                    {% if tx.rent_due_date and not tx.returned and tx.rent_due_date < datetime.utcnow().date() %}
+                      <span class="text-danger">{{ tx.rent_due_date.strftime('%Y-%m-%d') }}</span>
+                    {% else %}
+                      {{ tx.rent_due_date.strftime('%Y-%m-%d') if tx.rent_due_date else '-' }}
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td>
+                  {% if tx.kind == 'rent' %}
+                    {% if tx.returned %}
+                      <span class="badge text-bg-success">Devuelto</span>
+                    {% elif tx.rent_due_date and tx.rent_due_date < datetime.utcnow().date() %}
+                      <span class="badge text-bg-danger">Vencido</span>
+                    {% else %}
+                      <span class="badge text-bg-warning">En préstamo</span>
+                    {% endif %}
+                  {% else %}
+                    <span class="badge text-bg-secondary">Compra</span>
+                  {% endif %}
+                </td>
+                <td>
+                  {% if tx.kind == 'rent' and not tx.returned %}
+                    <div class="d-flex gap-2">
+                      <form action="{{ url_for('admin.extend_rental', transaction_id=tx.id) }}" method="post" class="d-flex gap-2">
+                        <input type="number" name="days" class="form-control form-control-sm" placeholder="días" required min="1" style="width: 80px">
+                        <button class="btn btn-sm btn-warning">Extender</button>
+                      </form>
+                    </div>
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% else %}
+              <tr><td colspan="10" class="text-center text-muted">No hay transacciones</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% if pagination.pages > 1 %}
+        <nav aria-label="Navegación de páginas" class="mt-4">
+          <ul class="pagination justify-content-center">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+              <a class="page-link" href="
+                {%- if pagination.has_prev -%}
+                  {{- url_for('admin.admin_transactions', page=pagination.prev_num, **request.args) -}}
+                {%- else -%}#
+                {%- endif -%}">
+                Anterior
+              </a>
+            </li>
+            
+            {%- for page in pagination.iter_pages() %}
+              {% if page %}
+                <li class="page-item {% if page == pagination.page %}active{% endif %}">
+                  <a class="page-link" href="{{ url_for('admin.admin_transactions', page=page, **request.args) }}">
+                    {{ page }}
+                  </a>
+                </li>
+              {% else %}
+                <li class="page-item disabled">
+                  <span class="page-link">...</span>
+                </li>
+              {% endif %}
+            {% endfor -%}
+            
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+              <a class="page-link" href="
+                {%- if pagination.has_next -%}
+                  {{- url_for('admin.admin_transactions', page=pagination.next_num, **request.args) -}}
+                {%- else -%}#
+                {%- endif -%}">
+                Siguiente
+              </a>
+            </li>
+          </ul>
+        </nav>
+        <p class="text-center text-muted">
+          Mostrando {{ pagination.items|length }} de {{ pagination.total }} transacciones
+        </p>
+      {% endif %}
+    </div>
+  </body>
+</html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin - Iniciar Sesión</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+  </head>
+  <body class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h2><i class="bi bi-shield-lock me-2"></i>Administrador</h2>
+        <p>Acceso al panel de control</p>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert" style="margin-bottom: 1rem;">
+              {% if category == 'error' %}
+                <i class="bi bi-exclamation-circle me-2"></i>
+              {% elif category == 'success' %}
+                <i class="bi bi-check-circle me-2"></i>
+              {% else %}
+                <i class="bi bi-info-circle me-2"></i>
+              {% endif %}
+              {{ msg }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      
+      <form method="post" class="fade-in">
+        {% if not require_2fa %}
+          <div class="mb-3">
+            <label class="form-label"><i class="bi bi-person-fill me-2"></i>Usuario</label>
+            <input type="text" name="username" class="form-control form-control-lg" required value="{{ request.form.username }}" placeholder="Tu nombre de usuario o email" autofocus>
+          </div>
+          <div class="mb-4">
+            <label class="form-label"><i class="bi bi-key-fill me-2"></i>Contraseña</label>
+            <input type="password" name="password" class="form-control form-control-lg" required placeholder="Tu contraseña">
+          </div>
+        {% else %}
+          <div class="alert alert-info" role="alert">
+            <i class="bi bi-shield-check me-2"></i>Verificación de Seguridad - Ingresa tu código 2FA
+          </div>
+          <input type="hidden" name="username" value="{{ username }}">
+          <div class="mb-3">
+            <label class="form-label"><i class="bi bi-shield-lock me-2"></i>Código 2FA (6 dígitos)</label>
+            <input type="text" name="totp_token" class="form-control form-control-lg text-center" required placeholder="000000" maxlength="6" pattern="[0-9]{6}" autofocus>
+            <small class="text-muted d-block mt-2">Ingresa el código de tu autenticador</small>
+          </div>
+        {% endif %}
+        
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg fw-bold">
+            <i class="bi bi-box-arrow-in-right me-2"></i>{% if require_2fa %}Verificar{% else %}Entrar{% endif %}
+          </button>
+        </div>
+      </form>
+      
+      <div class="form-divider">o</div>
+      
+      <div class="text-center mb-3">
+        <p class="mb-2 text-muted">¿No tienes cuenta?</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-outline-primary w-100">
+          <i class="bi bi-person-plus me-1"></i>Crear cuenta de administrador
+        </a>
+      </div>
+      
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 1.5rem; margin-top: 1.5rem;">
+        <p class="text-center text-muted mb-3"><i class="bi bi-mortarboard me-1"></i><strong>¿Eres Estudiante?</strong></p>
+        <a href="{{ url_for('auth.student_login') }}" class="btn btn-outline-success w-100">
+          <i class="bi bi-person-fill me-1"></i>Inicia sesión como estudiante
+        </a>
+      </div>
+      
+      <div class="mt-4 pt-3 border-top text-center text-muted small">
+        <p class="mb-1"><strong>Cuenta de demostración:</strong></p>
+        <p class="mb-0">Usuario: <code>admin</code> | Contraseña: <code>admin123</code></p>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

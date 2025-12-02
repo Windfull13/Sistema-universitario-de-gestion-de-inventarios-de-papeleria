@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Extensión de Renta</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f6f6f6;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #28a745;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0066cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>✅ Extensión de Renta Aprobada</h2>
+        </div>
+        <div class="content">
+            <h3>Detalles de la Extensión</h3>
+            <p>Se ha aprobado la extensión de renta para el siguiente item:</p>
+            <ul>
+                <li><strong>Item:</strong> {{ transaction.item.name }}</li>
+                <li><strong>Cantidad:</strong> {{ transaction.qty }}</li>
+                <li><strong>Días Extendidos:</strong> {{ extra_days }}</li>
+                <li><strong>Nueva Fecha de Vencimiento:</strong> {{ new_due_date.strftime('%Y-%m-%d') }}</li>
+            </ul>
+            <p>La extensión ha sido registrada exitosamente en el sistema.</p>
+            <center>
+                <a href="{{ url_for('admin_transactions', _external=True) }}" class="btn">Ver Transacciones</a>
+            </center>
+        </div>
+        <div class="footer">
+            <p>Este es un correo automático del Sistema de Inventario. Por favor no responda a este mensaje.</p>
+        </div>
+    </div>
+</body>
+</html>

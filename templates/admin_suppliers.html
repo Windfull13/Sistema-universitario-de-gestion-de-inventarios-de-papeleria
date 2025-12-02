@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Análisis de Proveedores - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+    <style>
+      .supplier-card {
+        border-left: 5px solid;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .supplier-card.risk-high {
+        border-left-color: #ef4444;
+        background: rgba(239, 68, 68, 0.05);
+      }
+      .supplier-card.risk-medium {
+        border-left-color: #f59e0b;
+        background: rgba(245, 158, 11, 0.05);
+      }
+      .supplier-card.risk-low {
+        border-left-color: #10b981;
+        background: rgba(16, 185, 129, 0.05);
+      }
+      .supplier-card:hover {
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+      .rotation-item {
+        border-left: 4px solid #f59e0b;
+        padding: 12px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        background: #fafaf9;
+      }
+      .metric-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        margin-right: 6px;
+        margin-bottom: 6px;
+      }
+      .metric-good {
+        background: #dcfce7;
+        color: #166534;
+      }
+      .metric-warning {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .metric-danger {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .header-gradient {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+      }
+      .recommendation-box {
+        background: linear-gradient(135deg, #f0fdf4 0%, #e0f7e4 100%);
+        border: 2px solid #10b981;
+        padding: 1.5rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+      }
+      .recommendation-critical {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border-color: #ef4444;
+      }
+      .recommendation-warning {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border-color: #f59e0b;
+      }
+      .stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: #2563eb;
+      }
+      .comparison-table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .comparison-table th {
+        background: #f3f4f6;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        border-bottom: 2px solid #e5e7eb;
+      }
+      .comparison-table td {
+        padding: 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .comparison-table tr:hover {
+        background: #f9fafb;
+      }
+      .risk-icon {
+        font-size: 1.5rem;
+        display: inline-block;
+        margin-right: 8px;
+      }
+      .velocity-slow {
+        color: #ef4444;
+        font-weight: bold;
+      }
+      .velocity-moderate {
+        color: #f59e0b;
+        font-weight: bold;
+      }
+      .velocity-good {
+        color: #10b981;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
+      <div class="container-lg">
+        <a class="navbar-brand" href="/">
+          <i class="bi bi-book-half me-2"></i>Papelería Universitaria
+        </a>
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          {% if current_user %}
+            <span class="text-muted d-none d-md-inline">
+              <i class="bi bi-person-circle me-1"></i>{{ current_user.username }} <span class="badge bg-primary ms-2">Admin</span>
+            </span>
+            <a href="/admin/settings" class="btn btn-sm btn-outline-primary me-2" title="Configuración">
+              <i class="bi bi-gear"></i>
+            </a>
+            <a class="btn btn-sm btn-outline-secondary" href="/logout">
+              <i class="bi bi-box-arrow-right me-1"></i>Salir
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-lg py-4">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ msg }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Header -->
+      <div class="header-gradient">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+          <div>
+            <h1 class="mb-2"><i class="bi bi-building me-2"></i>Inteligencia de Proveedores</h1>
+            <p class="mb-0 lead">Detecta proveedores lentos e identifica oportunidades de optimización</p>
+          </div>
+          <div class="text-end">
+            {% if supplier.last_updated %}
+              <div class="small text-white-50">
+                <i class="bi bi-clock me-1"></i>{{ supplier.last_updated }}
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      {% if supplier.error %}
+      <div class="alert alert-danger">
+        <i class="bi bi-exclamation-triangle me-2"></i>
+        <strong>Error:</strong> {{ supplier.error }}
+      </div>
+      {% else %}
+
+      <!-- SECCIÓN 1: RECOMENDACIONES -->
+      {% if supplier.recommendations and supplier.recommendations|length > 0 %}
+      <div class="mb-4">
+        <h3 class="mb-3"><i class="bi bi-lightbulb me-2" style="color: #f59e0b;"></i>Recomendaciones Inmediatas</h3>
+        {% for rec in supplier.recommendations %}
+          <div class="recommendation-box {% if rec.severity == 'CRÍTICO' %}recommendation-critical{% elif rec.severity == 'ALTO' %}recommendation-warning{% endif %}">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+              <div class="flex-grow-1">
+                <h6 class="mb-2">
+                  {% if rec.severity == 'CRÍTICO' %}
+                    <i class="bi bi-exclamation-circle-fill" style="color: #ef4444;"></i>
+                  {% elif rec.severity == 'ALTO' %}
+                    <i class="bi bi-exclamation-triangle-fill" style="color: #f59e0b;"></i>
+                  {% else %}
+                    <i class="bi bi-info-circle-fill" style="color: #2563eb;"></i>
+                  {% endif %}
+                  {{ rec.type }}: <strong>{{ rec.target }}</strong>
+                </h6>
+                <p class="mb-2 text-muted">{{ rec.reason }}</p>
+                <p class="mb-0"><strong>Acción:</strong> {{ rec.action }}</p>
+              </div>
+              <span class="badge {% if rec.severity == 'CRÍTICO' %}bg-danger{% elif rec.severity == 'ALTO' %}bg-warning text-dark{% else %}bg-info{% endif %}">
+                {{ rec.severity }}
+              </span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- SECCIÓN 2: PROVEEDORES LENTOS -->
+      {% if supplier.slow_suppliers and supplier.slow_suppliers|length > 0 %}
+      <div class="mb-4">
+        <h3 class="mb-3"><i class="bi bi-truck-front me-2"></i>Análisis de Proveedores</h3>
+        
+        <div class="row">
+          {% for sup in supplier.slow_suppliers %}
+          <div class="col-lg-6 mb-3">
+            <div class="card supplier-card {% if '🔴 ALTO' in sup.risk_level %}risk-high{% elif '🟡 MEDIO' in sup.risk_level %}risk-medium{% else %}risk-low{% endif %}">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                  <div>
+                    <h5 class="card-title mb-1">{{ sup.name }}</h5>
+                    {% if sup.contact or sup.city %}
+                    <small class="text-muted d-block">
+                      {% if sup.city %}<i class="bi bi-geo-alt me-1"></i>{{ sup.city }}{% endif %}
+                    </small>
+                    {% endif %}
+                  </div>
+                  <div class="risk-icon">{{ sup.risk_level }}</div>
+                </div>
+
+                <div class="row text-center mb-3 g-2">
+                  <div class="col-6">
+                    <div>
+                      <small class="text-muted d-block">Órdenes Totales</small>
+                      <strong style="font-size: 1.3rem; color: #2563eb;">{{ sup.total_orders }}</strong>
+                    </div>
+                  </div>
+                  <div class="col-6">
+                    <div>
+                      <small class="text-muted d-block">Productos</small>
+                      <strong style="font-size: 1.3rem; color: #2563eb;">{{ sup.items_supplied }}</strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mb-3 p-2 bg-light rounded">
+                  <small class="d-block mb-2">
+                    <i class="bi bi-calendar-event me-1"></i>
+                    <strong>Retraso Promedio:</strong>
+                    <span class="{% if sup.avg_delay_days > 5 %}velocity-slow{% elif sup.avg_delay_days > 2 %}velocity-moderate{% else %}velocity-good{% endif %}">
+                      {{ sup.avg_delay_days }} días
+                    </span>
+                  </small>
+                  <small class="d-block">
+                    <i class="bi bi-percent me-1"></i>
+                    <strong>Puntualidad:</strong>
+                    <span class="{% if sup.punctuality_rate < 60 %}velocity-slow{% elif sup.punctuality_rate < 80 %}velocity-moderate{% else %}velocity-good{% endif %}">
+                      {{ sup.punctuality_rate }}%
+                    </span>
+                  </small>
+                </div>
+
+                <div class="row text-center g-2">
+                  <div class="col-6">
+                    <small class="text-muted d-block">Entregadas</small>
+                    <span class="metric-badge metric-good">{{ sup.completed_orders }}</span>
+                  </div>
+                  <div class="col-6">
+                    <small class="text-muted d-block">Retrasadas</small>
+                    <span class="metric-badge {% if sup.delayed_orders > 0 %}metric-danger{% else %}metric-good{% endif %}">{{ sup.delayed_orders }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- SECCIÓN 3: PRODUCTOS CON ROTACIÓN LENTA -->
+      {% if supplier.slow_rotation and supplier.slow_rotation|length > 0 %}
+      <div class="mb-4">
+        <h3 class="mb-3"><i class="bi bi-hourglass-split me-2" style="color: #f59e0b;"></i>Productos con Rotación Lenta</h3>
+        <p class="text-muted">Estos productos se venden poco. Considera cambiar proveedor o ajustar precio.</p>
+        
+        {% for item in supplier.slow_rotation[:10] %}
+        <div class="rotation-item">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div class="flex-grow-1">
+              <h6 class="mb-1">{{ item.name }}</h6>
+              <small class="text-muted d-block mb-2">
+                <i class="bi bi-tag me-1"></i>{{ item.category or 'Sin categoría' }}
+                {% if item.supplier_name %}
+                  <span class="badge bg-light text-dark ms-2">Proveedor: {{ item.supplier_name }}</span>
+                {% endif %}
+              </small>
+              
+              <div class="d-flex gap-3 flex-wrap mt-2">
+                <div>
+                  <small class="text-muted d-block">Rotación (últimos 30d)</small>
+                  <span class="{% if item.daily_velocity < 0.5 %}velocity-slow{% elif item.daily_velocity < 1.0 %}velocity-moderate{% else %}velocity-good{% endif %}">
+                    {{ item.daily_velocity }} items/día
+                  </span>
+                </div>
+                <div>
+                  <small class="text-muted d-block">Históricamente</small>
+                  <span style="color: #6b7280;">{{ item.historical_velocity }} items/día</span>
+                </div>
+                <div>
+                  <small class="text-muted d-block">Stock Actual</small>
+                  <strong>{{ item.stock }} unidades</strong>
+                </div>
+                <div>
+                  <small class="text-muted d-block">Precio</small>
+                  <strong>${{ item.price|int }}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="text-end">
+              <div class="mb-2">
+                <span class="badge {% if 'LENTO' in item.rotation_status %}bg-danger{% elif 'MODERADO' in item.rotation_status %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                  {{ item.rotation_status }}
+                </span>
+              </div>
+              <small class="d-block text-muted">{{ item.trend }}</small>
+              {% if item.priority == 'ALTO' %}
+              <small class="d-block text-danger"><strong>⚠️ Revisar</strong></small>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+
+        {% if supplier.slow_rotation|length > 10 %}
+        <p class="text-muted mt-3">... y {{ supplier.slow_rotation|length - 10 }} productos más</p>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- SECCIÓN 4: COMPARACIÓN DE PROVEEDORES -->
+      {% if supplier.supplier_comparison and supplier.supplier_comparison|length > 0 %}
+      <div class="mb-4">
+        <h3 class="mb-3"><i class="bi bi-diagram-3 me-2"></i>Comparación de Proveedores por Categoría</h3>
+        <p class="text-muted">Identifica qué proveedor tiene mejor desempeño en cada categoría.</p>
+
+        {% for category, suppliers_dict in supplier.supplier_comparison.items() %}
+        <div class="card mb-3">
+          <div class="card-header bg-light">
+            <h6 class="mb-0"><i class="bi bi-folder me-2"></i>{{ category }}</h6>
+          </div>
+          <div class="card-body p-0">
+            <table class="comparison-table">
+              <thead>
+                <tr>
+                  <th>Proveedor</th>
+                  <th>Productos</th>
+                  <th>Precio Promedio</th>
+                  <th>Puntualidad</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for supplier_id, sup_data in suppliers_dict.items() %}
+                <tr>
+                  <td><strong>{{ sup_data.name }}</strong></td>
+                  <td>{{ sup_data.total_items }}</td>
+                  <td>${{ sup_data.avg_price|int }}</td>
+                  <td>
+                    <span class="badge {% if sup_data.avg_punctuality >= 90 %}bg-success{% elif sup_data.avg_punctuality >= 70 %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                      {{ sup_data.avg_punctuality }}%
+                    </span>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- INSIGHTS GENERALES -->
+      <div class="alert alert-light border" style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border-color: #0284c7;">
+        <h5 class="mb-3"><i class="bi bi-info-circle me-2" style="color: #0284c7;"></i>Análisis General</h5>
+        
+        <div class="row">
+          <div class="col-md-6 mb-2">
+            <small><strong>Proveedores Analizados:</strong> {{ supplier.slow_suppliers|length }}</small>
+          </div>
+          <div class="col-md-6 mb-2">
+            <small><strong>Productos Lentos:</strong> {{ supplier.slow_rotation|length }}</small>
+          </div>
+          <div class="col-md-6 mb-2">
+            <small><strong>Recomendaciones:</strong> {{ supplier.recommendations|length }}</small>
+          </div>
+          <div class="col-md-6 mb-2">
+            {% set critical_count = supplier.recommendations|selectattr('severity', 'equalto', 'CRÍTICO')|list|length %}
+            <small><strong>Críticas:</strong> <span class="text-danger">{{ critical_count }}</span></small>
+          </div>
+        </div>
+      </div>
+
+      {% endif %}
+
+      <!-- Botones de navegación -->
+      <div class="mt-4 pt-3 border-top d-flex gap-2 flex-wrap">
+        <a href="{{ url_for('admin.index') }}" class="btn btn-outline-secondary">
+          <i class="bi bi-arrow-left me-1"></i>Volver al Panel
+        </a>
+        <a href="{{ url_for('admin.admin_predictive') }}" class="btn btn-outline-primary">
+          <i class="bi bi-crystal-ball me-1"></i>Panel Predictivo
+        </a>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Stock Bajo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f6f6f6;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #ffa500;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0066cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>⚠️ Alerta: Stock Bajo</h2>
+        </div>
+        <div class="content">
+            <h3>Alerta de Stock Bajo</h3>
+            <p>El siguiente item ha alcanzado un nivel bajo de stock:</p>
+            <ul>
+                <li><strong>Item:</strong> {{ item.name }}</li>
+                <li><strong>Categoría:</strong> {{ item.category }}</li>
+                <li><strong>Stock Actual:</strong> {{ item.stock }}</li>
+                <li><strong>Límite Mínimo:</strong> {{ threshold }}</li>
+            </ul>
+            <p>Se recomienda reabastecer este item pronto para mantener el inventario en niveles óptimos.</p>
+            <center>
+                <a href="{{ url_for('admin_index', _external=True) }}" class="btn">Ver Inventario</a>
+            </center>
+        </div>
+        <div class="footer">
+            <p>Este es un correo automático del Sistema de Inventario. Por favor no responda a este mensaje.</p>
+        </div>
+    </div>
+</body>
+</html>

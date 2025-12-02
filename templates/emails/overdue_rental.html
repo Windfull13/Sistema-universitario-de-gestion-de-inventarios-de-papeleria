@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>Renta Vencida</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f6f6f6;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 5px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .header {
+            background-color: #ff4444;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            padding: 20px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #0066cc;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>⚠️ Alerta: Renta Vencida</h2>
+        </div>
+        <div class="content">
+            <h3>Detalles de la Renta Vencida</h3>
+            <p>El siguiente item rentado está vencido:</p>
+            <ul>
+                <li><strong>Item:</strong> {{ transaction.item.name }}</li>
+                <li><strong>Cantidad:</strong> {{ transaction.qty }}</li>
+                <li><strong>Fecha de vencimiento:</strong> {{ transaction.rent_due_date.strftime('%Y-%m-%d') }}</li>
+                <li><strong>Días de retraso:</strong> {{ days_overdue }}</li>
+            </ul>
+            <p>Por favor, contacte al usuario para gestionar la devolución del item lo antes posible.</p>
+            <center>
+                <a href="{{ url_for('admin_transactions', _external=True) }}" class="btn">Ver Transacciones</a>
+            </center>
+        </div>
+        <div class="footer">
+            <p>Este es un correo automático del Sistema de Inventario. Por favor no responda a este mensaje.</p>
+        </div>
+    </div>
+</body>
+</html>

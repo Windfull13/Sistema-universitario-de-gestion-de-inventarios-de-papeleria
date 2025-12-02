@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Control NFC - Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-10 offset-md-1">
+                <a href="/admin" class="btn btn-outline-secondary mb-3">← Volver</a>
+                
+                <h2>Control NFC/QR</h2>
+                <p class="text-muted">Simulador de escaneo NFC para gestionar devoluciones y reposiciones</p>
+                
+                <!-- Escaneo Individual -->
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Escaneo Individual</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Producto</label>
+                                <select class="form-select" id="itemSelect" required>
+                                    <option value="">-- Selecciona un producto --</option>
+                                    {% for item in items %}
+                                    <option value="{{ item.id }}">{{ item.name }} (Stock: {{ item.stock }})</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Accion</label>
+                                <select class="form-select" id="actionSelect" required>
+                                    <option value="">-- Selecciona accion --</option>
+                                    <option value="return">Devolucion</option>
+                                    <option value="restock">Reposicion</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Cantidad</label>
+                                <input type="number" class="form-control" id="qtyInput" value="1" min="1">
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="scanSingle()">Escanear</button>
+                        <div id="resultAlert" class="mt-3"></div>
+                    </div>
+                </div>
+                
+                <!-- Historial -->
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Historial</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="historyContainer">
+                            <p class="text-muted">Sin operaciones</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let history = [];
+
+        async function scanSingle() {
+            const itemId = document.getElementById('itemSelect').value;
+            const action = document.getElementById('actionSelect').value;
+            const qty = parseInt(document.getElementById('qtyInput').value) || 1;
+
+            if (!itemId || !action) {
+                alert('Completa todos los campos');
+                return;
+            }
+
+            try {
+                const response = await fetch('/nfc/api/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: parseInt(itemId),
+                        action: action,
+                        qty: qty
+                    })
+                });
+
+                const result = await response.json();
+                const resultDiv = document.getElementById('resultAlert');
+
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="alert alert-success">${result.message} (Stock: ${result.new_stock})</div>`;
+                    
+                    // Agregar al historial
+                    const itemName = document.getElementById('itemSelect').options[document.getElementById('itemSelect').selectedIndex].text;
+                    history.unshift({
+                        timestamp: new Date().toLocaleTimeString(),
+                        action: action === 'return' ? 'Devolucion' : 'Reposicion',
+                        item: itemName,
+                        qty: qty,
+                        stock: result.new_stock
+                    });
+                    updateHistory();
+                } else {
+                    resultDiv.innerHTML = `<div class="alert alert-danger">${result.message}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('resultAlert').innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+            }
+        }
+
+        function updateHistory() {
+            const container = document.getElementById('historyContainer');
+            if (history.length === 0) {
+                container.innerHTML = '<p class="text-muted">Sin operaciones</p>';
+                return;
+            }
+
+            let html = `<table class="table table-sm">
+                <thead class="table-light">
+                    <tr><th>Hora</th><th>Accion</th><th>Producto</th><th>Cant</th><th>Stock</th></tr>
+                </thead>
+                <tbody>`;
+
+            for (const item of history) {
+                html += `<tr>
+                    <td>${item.timestamp}</td>
+                    <td>${item.action}</td>
+                    <td>${item.item}</td>
+                    <td>${item.qty}</td>
+                    <td><strong>${item.stock}</strong></td>
+                </tr>`;
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
