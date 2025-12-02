@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Estudiante - Iniciar Sesión</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link href="{{ url_for('static', filename='style.css') }}" rel="stylesheet">
+  </head>
+  <body class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <h2><i class="bi bi-mortarboard-fill me-2"></i>Estudiante</h2>
+        <p>Acceso a tu cuenta de estudiante</p>
+      </div>
+      
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert" style="margin-bottom: 1rem;">
+              {% if category == 'error' %}
+                <i class="bi bi-exclamation-circle me-2"></i>
+              {% elif category == 'success' %}
+                <i class="bi bi-check-circle me-2"></i>
+              {% endif %}
+              {{ msg }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+      
+      <form method="post" class="fade-in">
+        <div class="mb-3">
+          <label class="form-label"><i class="bi bi-envelope-fill me-2"></i>Correo Electrónico</label>
+          <input type="email" name="email" class="form-control form-control-lg" required placeholder="tu@correo.com" value="{{ request.form.email }}" autofocus>
+        </div>
+        <div class="mb-4">
+          <label class="form-label"><i class="bi bi-key-fill me-2"></i>Contraseña</label>
+          <input type="password" name="password" class="form-control form-control-lg" required placeholder="Tu contraseña">
+        </div>
+        <div class="d-grid">
+          <button type="submit" class="btn btn-primary btn-lg fw-bold">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Entrar
+          </button>
+        </div>
+      </form>
+      
+      <div class="form-divider">o</div>
+      
+      <div class="text-center mb-3">
+        <p class="mb-2 text-muted">¿No tienes cuenta?</p>
+        <a href="{{ url_for('auth.register_student') }}" class="btn btn-outline-primary w-100">
+          <i class="bi bi-person-plus me-1"></i>Crear cuenta de estudiante
+        </a>
+      </div>
+      
+      <div style="border-top: 1px solid #e5e7eb; padding-top: 1.5rem; margin-top: 1.5rem;">
+        <p class="text-center text-muted mb-3"><i class="bi bi-shield me-1"></i><strong>¿Eres Administrador?</strong></p>
+        <a href="{{ url_for('auth.login') }}" class="btn btn-outline-secondary w-100">
+          <i class="bi bi-lock-fill me-1"></i>Inicia sesión como administrador
+        </a>
+      </div>
+      
+      <div class="mt-4 pt-3 border-top text-center text-muted small">
+        <p class="mb-1"><strong>Cuenta de demostración:</strong></p>
+        <p class="mb-0">Email: <code>student@example.com</code> | Contraseña: <code>student123</code></p>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

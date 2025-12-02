@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gestión de API Keys</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand" href="/"><i class="fas fa-boxes"></i> Inventario</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>
+            {% if current_user and current_user.is_authenticated %}
+              <li class="nav-item"><a class="nav-link" href="/admin">Admin</a></li>
+              <li class="nav-item"><a class="nav-link" href="/logout">Salir</a></li>
+            {% else %}
+              <li class="nav-item"><a class="nav-link" href="/login">Iniciar Sesión</a></li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <div class="container mt-4">
+    <h2>Gestión de API Keys</h2>
+    
+    <!-- Crear nueva API key -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4>Crear Nueva API Key</h4>
+        </div>
+        <div class="card-body">
+            <form method="POST">
+                <input type="hidden" name="action" value="create">
+                <div class="form-group">
+                    <label for="name">Nombre/Descripción</label>
+                    <input type="text" class="form-control" id="name" name="name" required 
+                           placeholder="Ej: Integration Test, Mobile App, etc.">
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Generar API Key</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lista de API keys activas -->
+    <div class="card">
+        <div class="card-header">
+            <h4>API Keys Activas</h4>
+        </div>
+        <div class="card-body">
+            {% if api_keys %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>API Key</th>
+                            <th>Creada</th>
+                            <th>Último uso</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in api_keys %}
+                        <tr>
+                            <td>{{ key.name }}</td>
+                            <td>
+                                <code>{{ key.key }}</code>
+                                <button class="btn btn-sm btn-secondary" 
+                                        onclick="copyToClipboard('{{ key.key }}')" 
+                                        title="Copiar al portapapeles">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </td>
+                            <td>{{ key.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                            <td>
+                                {% if key.last_used_at %}
+                                    {{ key.last_used_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                                {% else %}
+                                    Nunca
+                                {% endif %}
+                            </td>
+                            <td>
+                                <form method="POST" class="d-inline" 
+                                      onsubmit="return confirm('¿Seguro que desea revocar esta API key?')">
+                                    <input type="hidden" name="action" value="revoke">
+                                    <input type="hidden" name="key_id" value="{{ key.id }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        Revocar
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No hay API keys activas.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- API Documentation -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h4>Documentación de la API</h4>
+        </div>
+        <div class="card-body">
+            <h5>Autenticación</h5>
+            <p>
+                Incluye tu API key en el header <code>Authorization</code> de cada petición:
+                <pre><code>Authorization: Bearer TU-API-KEY</code></pre>
+            </p>
+
+            <h5>Endpoints Disponibles</h5>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Método</th>
+                            <th>Endpoint</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/api/items</code></td>
+                            <td>Lista todos los items. Acepta filtro por <code>?category=</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/api/items/{id}</code></td>
+                            <td>Obtiene un item específico</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/items</code></td>
+                            <td>Crea un nuevo item (requiere rol admin)</td>
+                        </tr>
+                        <tr>
+                            <td><code>PUT</code></td>
+                            <td><code>/api/items/{id}</code></td>
+                            <td>Actualiza un item (requiere rol admin)</td>
+                        </tr>
+                        <tr>
+                            <td><code>DELETE</code></td>
+                            <td><code>/api/items/{id}</code></td>
+                            <td>Elimina un item (requiere rol admin)</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/api/transactions</code></td>
+                            <td>Lista todas las transacciones. Acepta filtro por <code>?kind=</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/api/transactions/{id}</code></td>
+                            <td>Obtiene una transacción específica</td>
+                        </tr>
+                        <tr>
+                            <td><code>POST</code></td>
+                            <td><code>/api/transactions</code></td>
+                            <td>Crea una nueva transacción</td>
+                        </tr>
+                        <tr>
+                            <td><code>GET</code></td>
+                            <td><code>/api/stats</code></td>
+                            <td>Obtiene estadísticas del sistema (requiere rol admin)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h5>Ejemplos de Uso</h5>
+            <div class="mb-3">
+                <h6>Listar Items</h6>
+                <pre><code>curl -H "Authorization: Bearer TU-API-KEY" http://localhost:5000/api/items</code></pre>
+            </div>
+
+            <div class="mb-3">
+                <h6>Crear Item (admin)</h6>
+                <pre><code>curl -X POST \
+    -H "Authorization: Bearer TU-API-KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"name": "Nuevo Item", "description": "Descripción", "category": "Categoría", "price": 10.99, "stock": 100}' \
+    http://localhost:5000/api/items</code></pre>
+            </div>
+
+            <div class="mb-3">
+                <h6>Crear Transacción de Compra</h6>
+                <pre><code>curl -X POST \
+    -H "Authorization: Bearer TU-API-KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"item_id": 1, "kind": "purchase", "qty": 1}' \
+    http://localhost:5000/api/transactions</code></pre>
+            </div>
+
+            <div class="mb-3">
+                <h6>Crear Transacción de Renta</h6>
+                <pre><code>curl -X POST \
+    -H "Authorization: Bearer TU-API-KEY" \
+    -H "Content-Type: application/json" \
+    -d '{"item_id": 1, "kind": "rent", "qty": 1, "rent_days": 7}' \
+    http://localhost:5000/api/transactions</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Script para copiar al portapapeles -->
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(function() {
+        alert('API Key copiada al portapapeles');
+    }).catch(function(err) {
+        console.error('Error al copiar texto: ', err);
+    });
+}
+</script>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

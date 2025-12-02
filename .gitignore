@@ -1,0 +1,99 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+inventory_dev.db
+inventory_test.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Uploads y Media
+static/uploads/*
+!static/uploads/.gitkeep
+media/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+.windows-build-tools
+
+# Testing
+.coverage
+.pytest_cache/
+htmlcov/
+.tox/
+
+# Deployment
+*.sock
+.serverless
+
+# Heroku / Railway / Render
+Procfile.local
+runtime.log
+
+# Node (si hay frontend con npm)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# macOS
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temp files
+*.tmp
+*.temp

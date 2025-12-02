@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Log de Seguridad</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand" href="/"><i class="fas fa-list"></i> Log de Seguridad</a>
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="/security-dashboard">Dashboard</a>
+          <a class="nav-link" href="/admin">Admin</a>
+          <a class="nav-link" href="/logout">Salir</a>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mt-5">
+      <h2>📋 Log Completo de Intentos de Login</h2>
+      
+      <div class="card">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">Todos los Intentos de Login (Página {{ pagination.page }})</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-striped table-sm">
+              <thead class="table-light">
+                <tr>
+                  <th>Usuario</th>
+                  <th>IP</th>
+                  <th>Estado</th>
+                  <th>Hora</th>
+                  <th>User Agent</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for attempt in pagination.items %}
+                <tr class="{% if attempt.success %}table-success{% else %}table-danger{% endif %}">
+                  <td>{{ attempt.username }}</td>
+                  <td><code>{{ attempt.ip_address }}</code></td>
+                  <td>
+                    {% if attempt.success %}
+                      <span class="badge bg-success">✓ Exitoso</span>
+                    {% else %}
+                      <span class="badge bg-danger">✗ Fallido</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ attempt.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                  <td><small class="text-muted">{{ attempt.user_agent[:70] if attempt.user_agent else 'N/A' }}</small></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paginación -->
+          <nav aria-label="Page navigation">
+            <ul class="pagination justify-content-center">
+              {% if pagination.has_prev %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1">Primera</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ pagination.prev_num }}">Anterior</a>
+              </li>
+              {% endif %}
+
+              {% for page_num in pagination.iter_pages() %}
+                {% if page_num %}
+                  {% if page_num == pagination.page %}
+                  <li class="page-item active">
+                    <span class="page-link">{{ page_num }}</span>
+                  </li>
+                  {% else %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                  </li>
+                  {% endif %}
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+              {% endfor %}
+
+              {% if pagination.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ pagination.next_num }}">Siguiente</a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ pagination.pages }}">Última</a>
+              </li>
+              {% endif %}
+            </ul>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Estadísticas -->
+      <div class="row mt-4">
+        <div class="col-md-6">
+          <div class="card bg-light">
+            <div class="card-body text-center">
+              <h5>Total de Registros</h5>
+              <h3>{{ pagination.total }}</h3>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card bg-light">
+            <div class="card-body text-center">
+              <h5>Página</h5>
+              <h3>{{ pagination.page }} de {{ pagination.pages }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
