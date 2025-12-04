@@ -7,19 +7,21 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 class Config:
     """Configuración por defecto"""
     # Database
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    
     # En producción, usar PostgreSQL; en desarrollo, SQLite
-    if os.environ.get('DATABASE_URL'):
+    _db_url = os.environ.get('DATABASE_URL')
+    if _db_url:
         # Para Render y otros servicios en la nube
-        DATABASE_URL = os.environ.get('DATABASE_URL')
-        if DATABASE_URL.startswith('postgres://'):
-            DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
-        SQLALCHEMY_DATABASE_URI = DATABASE_URL
+        if _db_url.startswith('postgres://'):
+            _db_url = _db_url.replace('postgres://', 'postgresql://', 1)
+        SQLALCHEMY_DATABASE_URI = _db_url
         # Opciones optimizadas para PostgreSQL en Render (free tier)
         SQLALCHEMY_ENGINE_OPTIONS = {
             'pool_pre_ping': True,
-            'pool_recycle': 300,             # Recicla cada 5 minutos
-            'pool_size': 2,                  # Mínimo pool size para free tier
-            'max_overflow': 0,               # Sin overflow
+            'pool_recycle': 300,
+            'pool_size': 2,
+            'max_overflow': 0,
             'echo': False,
             'connect_args': {
                 'connect_timeout': 5,
@@ -28,13 +30,10 @@ class Config:
     else:
         # Desarrollo local
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "inventory.db")}'
-        # Opciones para SQLite
         SQLALCHEMY_ENGINE_OPTIONS = {
             'connect_args': {'timeout': 30},
             'pool_pre_ping': True,
         }
-    
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # Application URL (para QRs y URLs en emails)
     APP_URL = os.environ.get('APP_URL', 'http://localhost:5000')

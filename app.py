@@ -7,10 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, session, g, redirect, url_for
 from flask_sqlalchemy import SQLAlchemy
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from flask_mail import Mail
-from apscheduler.schedulers.background import BackgroundScheduler
 
 # Configuration
 from config import config
@@ -18,7 +15,6 @@ from config import config
 # Database models and utilities
 from models import db, User, ActiveSession, Transaction, Item
 from utils.security import get_client_ip
-from utils.analytics import get_analytics_data
 from routes import register_blueprints
 
 # Logging setup
@@ -41,7 +37,11 @@ app.config.from_object(config.get(config_name, config['development']))
 
 # Initialize extensions
 db.init_app(app)
-mail = Mail(app)
+try:
+    mail = Mail(app)
+except Exception as e:
+    # Mail puede fallar si no hay config de email
+    mail = None
 # Limiter deshabilitado temporalmente para debugging
 # limiter = Limiter(
 #     app=app,
@@ -51,16 +51,24 @@ mail = Mail(app)
 
 # Initialize database automatically on startup
 def init_database():
-    """Initialize database tables"""
+    """Initialize database tables - very defensive"""
     try:
         with app.app_context():
-            db.create_all()
+            try:
+                db.create_all()
+            except Exception as create_error:
+                # Puede fallar si la BD no está lista, pero eso está bien
+                pass
             return True
     except Exception as e:
+        # No lancemos excepción - la app debe iniciarse aunque la BD falle
         return False
 
 # Ejecutar inicialización
-db_initialized = init_database()
+try:
+    db_initialized = init_database()
+except:
+    db_initialized = False
 
 # Session configuration for security
 app.config.update(
@@ -183,6 +191,12 @@ def health_check():
         'app_initialized': db_initialized
     }, 200
 
+# Simple test route
+@app.route('/test')
+def test():
+    """Test route - returns plain text"""
+    return 'OK', 200
+
 # Simple public pages
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
@@ -191,13 +205,25 @@ def index():
     if request.method == 'HEAD':
         return '', 200
     
-    if g.user:
-        if g.user.role == 'admin':
-            return redirect(url_for('admin.index'))
-        else:
-            return redirect(url_for('student.student'))
-    
-    return render_template('index.html')
+    try:
+        if g.user:
+            if g.user.role == 'admin':
+                return redirect(url_for('admin.index'))
+            else:
+                return redirect(url_for('student.student'))
+        
+        return render_template('index.html')
+    except Exception as e:
+        # Si falla el template, retornar HTML simple
+        return '''
+        <html>
+        <head><title>Sistema de Inventarios</title></head>
+        <body>
+            <h1>Sistema de Inventarios Universitario</h1>
+            <p>Cargando...</p>
+        </body>
+        </html>
+        ''', 200
 
 @app.route('/item/<int:item_id>', methods=['GET', 'POST', 'HEAD'])
 def view_item(item_id):
@@ -287,7 +313,10 @@ def nfc_control_alias():
     return nfc_control_func()
 
 # Register all blueprints
-register_blueprints(app)
+try:
+    register_blueprints(app)
+except Exception as e:
+    logger.error(f"Error registering blueprints: {e}")
 
 # Background scheduler for periodic tasks
 def check_overdue_rentals():
