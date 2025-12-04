@@ -24,14 +24,14 @@ from routes import register_blueprints
 # Logging setup
 import sys
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout),
-        logging.StreamHandler(sys.stderr)
-    ]
+    level=logging.WARNING,  # Solo WARNING y ERROR para reducir ruido
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
 )
 logger = logging.getLogger(__name__)
+# Reducir verbosity de librerías terceras
+logging.getLogger('werkzeug').setLevel(logging.ERROR)
+logging.getLogger('sqlalchemy').setLevel(logging.ERROR)
+logging.getLogger('apscheduler').setLevel(logging.ERROR)
 
 # Create Flask app
 app = Flask(__name__)
@@ -54,20 +54,8 @@ def init_database():
     """Inicializa la base de datos con manejo robusto de errores"""
     try:
         with app.app_context():
-            logger.info("🔄 Iniciando inicialización de base de datos...")
-            
-            # Verifica la conexión a la BD
-            try:
-                db.session.execute('SELECT 1')
-                logger.info("✅ Conexión a base de datos verificada")
-            except Exception as conn_error:
-                logger.error(f"❌ Error de conexión a BD: {conn_error}")
-                logger.error(f"DATABASE_URL configurada: {bool(os.environ.get('DATABASE_URL'))}")
-                raise
-            
             # Crea las tablas
             db.create_all()
-            logger.info("✅ Tablas de base de datos creadas/verificadas")
             
             # Limpia sesiones activas previas
             try:
@@ -75,19 +63,12 @@ def init_database():
                 for sess in expired:
                     sess.is_active = False
                 db.session.commit()
-                logger.info(f"🧹 Limpiadas {len(expired)} sesiones previas")
-            except Exception as session_error:
-                logger.warning(f"⚠️ Error limpiando sesiones: {session_error}")
+            except Exception as e:
                 db.session.rollback()
             
-            logger.info("✅ Inicialización de BD completada exitosamente")
             return True
             
     except Exception as e:
-        logger.error(f"❌ Error fatal en inicialización de BD: {e}")
-        logger.error(f"Tipo de error: {type(e).__name__}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
         return False
 
 # Ejecutar inicialización
@@ -111,29 +92,25 @@ def before_request():
     """Load user from session before each request"""
     g.user = None
     
+    # Ignorar completamente HEAD requests
+    if request.method == 'HEAD':
+        return
+    
     # Si la BD no está inicializada, no procesar sesiones complejas
     if not db_initialized:
-        logger.debug(f"Database not initialized, skipping session validation for {request.method} {request.path}")
         return
     
     try:
-        # Para HEAD requests, hacer mínima lógica
-        if request.method == 'HEAD':
-            return
-        
         if 'user_id' in session:
             try:
                 g.user = User.query.get(session['user_id'])
             except Exception as e:
-                logger.warning(f"Error loading user from session: {e}")
                 session.clear()
                 return
             
             if g.user:
-                # Validate session security if session_token exists
                 session_token = session.get('session_token')
                 
-                # If no session token, clear session silently
                 if not session_token:
                     session.clear()
                     g.user = None
@@ -141,9 +118,6 @@ def before_request():
                 
                 try:
                     client_ip = get_client_ip()
-                    user_agent = request.headers.get('User-Agent', '')
-                    
-                    # Check for session expiration or IP change
                     active_session = ActiveSession.query.filter_by(
                         user_id=g.user.id,
                         session_token=session_token,
@@ -151,27 +125,20 @@ def before_request():
                     ).first()
                     
                     if not active_session:
-                        # Session not found in DB or was invalidated (app restart)
-                        # Clear session silently and continue - user will see home page
-                        logger.info(f"Session invalidated for user {g.user.id} (app restart)")
                         session.clear()
                         g.user = None
                         return
                     
                     if not active_session.validate_session(g.user.id, session_token, client_ip):
-                        # Session compromised or expired - redirect to login for security
-                        logger.warning(f"Session validation failed for user {g.user.id}")
                         session.clear()
                         g.user = None
                         return redirect(url_for('auth.login'))
                 except Exception as e:
-                    logger.warning(f"Error validating session: {e}")
                     session.clear()
                     g.user = None
             else:
                 session.clear()
     except Exception as e:
-        logger.error(f"Unexpected error in before_request: {e}")
         g.user = None
 
 @app.context_processor
@@ -184,16 +151,8 @@ def inject_globals():
 
 @app.after_request
 def after_request(response):
-    """Post-process de respuestas"""
-    # Para HEAD requests, no incluir body pero sí headers
-    if request.method == 'HEAD' and response.direct_passthrough:
-        response.direct_passthrough = False
-    
-    # Agregar headers de seguridad
+    """Add security headers"""
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
-    response.headers['X-XSS-Protection'] = '1; mode=block'
-    
     return response
 
 # Error handlers
@@ -203,15 +162,10 @@ def not_found(error):
 
 @app.errorhandler(500)
 def server_error(error):
-    """Manejo robusto de errores 500"""
-    import traceback
-    logger.error(f"Server error on {request.method} {request.path}: {error}")
-    logger.error(f"Full traceback: {traceback.format_exc()}")
+    """Manejo simple de errores 500"""
     try:
         return render_template('500.html'), 500
-    except Exception as e:
-        # Si no se puede renderizar template, retornar JSON simple
-        logger.error(f"Error rendering 500.html: {e}")
+    except:
         return {'error': 'Internal server error'}, 500
 
 @app.errorhandler(403)
@@ -236,21 +190,10 @@ def health_check():
     if request.method == 'HEAD':
         return '', 200
     
-    try:
-        # Verifica conexión a BD
-        db.session.execute('SELECT 1')
-        return {
-            'status': 'healthy',
-            'database': 'connected',
-            'app_initialized': db_initialized
-        }, 200
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {
-            'status': 'unhealthy',
-            'database': 'disconnected',
-            'error': str(e)
-        }, 503
+    return {
+        'status': 'healthy',
+        'app_initialized': db_initialized
+    }, 200
 
 # Simple public pages
 @app.route('/', methods=['GET', 'HEAD'])
@@ -265,12 +208,6 @@ def index():
             return redirect(url_for('admin.index'))
         else:
             return redirect(url_for('student.student'))
-    
-    try:
-        items = db.session.query(db.func.count(db.func.distinct(db.func.date(Transaction.timestamp)))).scalar() or 0
-    except Exception as e:
-        logger.warning(f"Error counting transactions: {e}")
-        items = 0
     
     return render_template('index.html')
 

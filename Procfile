@@ -1,1 +1,1 @@
-web: gunicorn --workers 4 --worker-class sync --threads 2 --bind 0.0.0.0:5000 --timeout 120 --access-logfile - --error-logfile - app:app
+web: gunicorn --workers 2 --worker-class sync --bind 0.0.0.0:5000 --timeout 60 --access-logfile - --error-logfile - --log-level info app:app
