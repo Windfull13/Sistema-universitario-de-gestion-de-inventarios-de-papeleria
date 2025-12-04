@@ -154,6 +154,20 @@ def inject_globals():
         'datetime': datetime
     }
 
+@app.after_request
+def after_request(response):
+    """Post-process de respuestas"""
+    # Para HEAD requests, no incluir body pero sí headers
+    if request.method == 'HEAD' and response.direct_passthrough:
+        response.direct_passthrough = False
+    
+    # Agregar headers de seguridad
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    
+    return response
+
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
@@ -168,8 +182,18 @@ def server_error(error):
 def forbidden(error):
     return render_template('403.html'), 403
 
+@app.errorhandler(405)
+def method_not_allowed(error):
+    """Maneja solicitudes con métodos no permitidos (ej: HEAD)"""
+    # Si es HEAD, tratarlo como GET
+    if request.method == 'HEAD':
+        # Redirigir a GET silenciosamente
+        return '', 200
+    logger.warning(f"Method not allowed: {request.method} {request.path}")
+    return {'error': 'Method not allowed'}, 405
+
 # Health check endpoint
-@app.route('/health')
+@app.route('/health', methods=['GET', 'HEAD'])
 def health_check():
     """Health check endpoint para Render y monitoreo"""
     try:
@@ -189,7 +213,7 @@ def health_check():
         }, 503
 
 # Simple public pages
-@app.route('/')
+@app.route('/', methods=['GET', 'HEAD'])
 def index():
     """Home page"""
     if g.user:
@@ -198,7 +222,12 @@ def index():
         else:
             return redirect(url_for('student.student'))
     
-    items = db.session.query(db.func.count(db.func.distinct(db.func.date(Transaction.timestamp)))).scalar() or 0
+    try:
+        items = db.session.query(db.func.count(db.func.distinct(db.func.date(Transaction.timestamp)))).scalar() or 0
+    except Exception as e:
+        logger.warning(f"Error counting transactions: {e}")
+        items = 0
+    
     return render_template('index.html')
 
 @app.route('/item/<int:item_id>', methods=['GET', 'POST'])
