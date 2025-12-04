@@ -14,9 +14,25 @@ class Config:
         if DATABASE_URL.startswith('postgres://'):
             DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
+        # Opciones optimizadas para PostgreSQL en producción
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_pre_ping': True,           # Verifica conexiones antes de usarlas
+            'pool_recycle': 3600,            # Recicla conexiones cada hora
+            'pool_size': 5,                  # Tamaño del pool
+            'max_overflow': 10,              # Máximo de conexiones extra
+            'connect_args': {
+                'connect_timeout': 10,
+                'application_name': 'inventarios_app'
+            }
+        }
     else:
         # Desarrollo local
         SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(BASE_DIR, "inventory.db")}'
+        # Opciones para SQLite
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'connect_args': {'timeout': 30},
+            'pool_pre_ping': True,
+        }
     
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     

@@ -45,12 +45,48 @@ limiter = Limiter(
 )
 
 # Initialize database automatically on startup
-with app.app_context():
+def init_database():
+    """Inicializa la base de datos con manejo robusto de errores"""
     try:
-        db.create_all()
-        logger.info("✅ Database tables created/verified")
+        with app.app_context():
+            logger.info("🔄 Iniciando inicialización de base de datos...")
+            
+            # Verifica la conexión a la BD
+            try:
+                db.session.execute('SELECT 1')
+                logger.info("✅ Conexión a base de datos verificada")
+            except Exception as conn_error:
+                logger.error(f"❌ Error de conexión a BD: {conn_error}")
+                logger.error(f"DATABASE_URL configurada: {bool(os.environ.get('DATABASE_URL'))}")
+                raise
+            
+            # Crea las tablas
+            db.create_all()
+            logger.info("✅ Tablas de base de datos creadas/verificadas")
+            
+            # Limpia sesiones activas previas
+            try:
+                expired = ActiveSession.query.filter_by(is_active=True).all()
+                for sess in expired:
+                    sess.is_active = False
+                db.session.commit()
+                logger.info(f"🧹 Limpiadas {len(expired)} sesiones previas")
+            except Exception as session_error:
+                logger.warning(f"⚠️ Error limpiando sesiones: {session_error}")
+                db.session.rollback()
+            
+            logger.info("✅ Inicialización de BD completada exitosamente")
+            return True
+            
     except Exception as e:
-        logger.error(f"❌ Error initializing database: {e}")
+        logger.error(f"❌ Error fatal en inicialización de BD: {e}")
+        logger.error(f"Tipo de error: {type(e).__name__}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        return False
+
+# Ejecutar inicialización
+db_initialized = init_database()
 
 # Session configuration for security
 app.config.update(
@@ -61,30 +97,9 @@ app.config.update(
 )
 
 def init_db():
-    """Initialize database"""
-    with app.app_context():
-        db.create_all()
-        logger.info("Database initialized")
-        
-        # Limpiar sesiones activas previas al iniciar
-        expired_sessions = ActiveSession.query.filter_by(is_active=True).all()
-        for sess in expired_sessions:
-            sess.is_active = False
-        db.session.commit()
-        logger.info(f"Cleaned up {len(expired_sessions)} previous sessions on startup")
-        
-        # Create demo admin if it doesn't exist
-        if not User.query.filter_by(username='admin').first():
-            from utils.security import hash_password
-            admin = User(
-                username='admin',
-                email='admin@example.com',
-                password_hash=hash_password('admin123'),
-                role='admin'
-            )
-            db.session.add(admin)
-            db.session.commit()
-            logger.info("Demo admin user created")
+    """Initialize database - deprecated, kept for backward compatibility"""
+    # La inicialización ahora se hace automáticamente en init_database()
+    pass
 
 @app.before_request
 def before_request():
@@ -152,6 +167,26 @@ def server_error(error):
 @app.errorhandler(403)
 def forbidden(error):
     return render_template('403.html'), 403
+
+# Health check endpoint
+@app.route('/health')
+def health_check():
+    """Health check endpoint para Render y monitoreo"""
+    try:
+        # Verifica conexión a BD
+        db.session.execute('SELECT 1')
+        return {
+            'status': 'healthy',
+            'database': 'connected',
+            'app_initialized': db_initialized
+        }, 200
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            'status': 'unhealthy',
+            'database': 'disconnected',
+            'error': str(e)
+        }, 503
 
 # Simple public pages
 @app.route('/')
