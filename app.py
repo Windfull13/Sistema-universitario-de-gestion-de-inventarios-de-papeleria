@@ -22,7 +22,6 @@ from utils.analytics import get_analytics_data
 from routes import register_blueprints
 
 # Logging setup
-import sys
 logging.basicConfig(
     level=logging.WARNING,  # Solo WARNING y ERROR para reducir ruido
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
@@ -43,31 +42,20 @@ app.config.from_object(config.get(config_name, config['development']))
 # Initialize extensions
 db.init_app(app)
 mail = Mail(app)
-limiter = Limiter(
-    app=app,
-    key_func=get_remote_address,
-    default_limits=["200 per day", "50 per hour"]
-)
+# Limiter deshabilitado temporalmente para debugging
+# limiter = Limiter(
+#     app=app,
+#     key_func=get_remote_address,
+#     default_limits=["200 per day", "50 per hour"]
+# )
 
 # Initialize database automatically on startup
 def init_database():
-    """Inicializa la base de datos con manejo robusto de errores"""
+    """Initialize database tables"""
     try:
         with app.app_context():
-            # Crea las tablas
             db.create_all()
-            
-            # Limpia sesiones activas previas
-            try:
-                expired = ActiveSession.query.filter_by(is_active=True).all()
-                for sess in expired:
-                    sess.is_active = False
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-            
             return True
-            
     except Exception as e:
         return False
 
@@ -337,16 +325,15 @@ if __name__ == '__main__':
     # Initialize database
     init_db()
     
-    # Start background scheduler
-    scheduler = BackgroundScheduler()
-    scheduler.add_job(check_overdue_rentals, 'interval', minutes=60, id='check_overdue')
-    scheduler.add_job(cleanup_expired_sessions, 'interval', minutes=30, id='cleanup_sessions')
-    
-    try:
-        scheduler.start()
-        logger.info("Scheduler started")
-    except Exception as e:
-        logger.error(f"Failed to start scheduler: {e}")
+    # Start background scheduler - DESHABILITADO EN PRODUCCIÓN
+    # scheduler = BackgroundScheduler()
+    # scheduler.add_job(check_overdue_rentals, 'interval', minutes=60, id='check_overdue')
+    # scheduler.add_job(cleanup_expired_sessions, 'interval', minutes=30, id='cleanup_sessions')
+    #
+    # try:
+    #     scheduler.start()
+    # except Exception as e:
+    #     logger.error(f"Failed to start scheduler: {e}")
     
     # Run Flask development server
     try:

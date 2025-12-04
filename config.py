@@ -14,15 +14,15 @@ class Config:
         if DATABASE_URL.startswith('postgres://'):
             DATABASE_URL = DATABASE_URL.replace('postgres://', 'postgresql://', 1)
         SQLALCHEMY_DATABASE_URI = DATABASE_URL
-        # Opciones optimizadas para PostgreSQL en producción
+        # Opciones optimizadas para PostgreSQL en Render (free tier)
         SQLALCHEMY_ENGINE_OPTIONS = {
-            'pool_pre_ping': True,           # Verifica conexiones antes de usarlas
-            'pool_recycle': 3600,            # Recicla conexiones cada hora
-            'pool_size': 5,                  # Tamaño del pool
-            'max_overflow': 10,              # Máximo de conexiones extra
+            'pool_pre_ping': True,
+            'pool_recycle': 300,             # Recicla cada 5 minutos
+            'pool_size': 2,                  # Mínimo pool size para free tier
+            'max_overflow': 0,               # Sin overflow
+            'echo': False,
             'connect_args': {
-                'connect_timeout': 10,
-                'application_name': 'inventarios_app'
+                'connect_timeout': 5,
             }
         }
     else:
