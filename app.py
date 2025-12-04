@@ -44,6 +44,14 @@ limiter = Limiter(
     default_limits=["200 per day", "50 per hour"]
 )
 
+# Initialize database automatically on startup
+with app.app_context():
+    try:
+        db.create_all()
+        logger.info("✅ Database tables created/verified")
+    except Exception as e:
+        logger.error(f"❌ Error initializing database: {e}")
+
 # Session configuration for security
 app.config.update(
     SESSION_COOKIE_SECURE=not app.debug,
