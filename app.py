@@ -22,9 +22,14 @@ from utils.analytics import get_analytics_data
 from routes import register_blueprints
 
 # Logging setup
+import sys
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.StreamHandler(sys.stderr)
+    ]
 )
 logger = logging.getLogger(__name__)
 
@@ -106,45 +111,68 @@ def before_request():
     """Load user from session before each request"""
     g.user = None
     
-    if 'user_id' in session:
-        g.user = User.query.get(session['user_id'])
+    # Si la BD no está inicializada, no procesar sesiones complejas
+    if not db_initialized:
+        logger.debug(f"Database not initialized, skipping session validation for {request.method} {request.path}")
+        return
+    
+    try:
+        # Para HEAD requests, hacer mínima lógica
+        if request.method == 'HEAD':
+            return
         
-        if g.user:
-            # Validate session security if session_token exists
-            session_token = session.get('session_token')
-            
-            # If no session token, clear session silently
-            if not session_token:
+        if 'user_id' in session:
+            try:
+                g.user = User.query.get(session['user_id'])
+            except Exception as e:
+                logger.warning(f"Error loading user from session: {e}")
                 session.clear()
-                g.user = None
                 return
             
-            client_ip = get_client_ip()
-            user_agent = request.headers.get('User-Agent', '')
-            
-            # Check for session expiration or IP change
-            active_session = ActiveSession.query.filter_by(
-                user_id=g.user.id,
-                session_token=session_token,
-                is_active=True
-            ).first()
-            
-            if not active_session:
-                # Session not found in DB or was invalidated (app restart)
-                # Clear session silently and continue - user will see home page
-                logger.info(f"Session invalidated for user {g.user.id} (app restart)")
+            if g.user:
+                # Validate session security if session_token exists
+                session_token = session.get('session_token')
+                
+                # If no session token, clear session silently
+                if not session_token:
+                    session.clear()
+                    g.user = None
+                    return
+                
+                try:
+                    client_ip = get_client_ip()
+                    user_agent = request.headers.get('User-Agent', '')
+                    
+                    # Check for session expiration or IP change
+                    active_session = ActiveSession.query.filter_by(
+                        user_id=g.user.id,
+                        session_token=session_token,
+                        is_active=True
+                    ).first()
+                    
+                    if not active_session:
+                        # Session not found in DB or was invalidated (app restart)
+                        # Clear session silently and continue - user will see home page
+                        logger.info(f"Session invalidated for user {g.user.id} (app restart)")
+                        session.clear()
+                        g.user = None
+                        return
+                    
+                    if not active_session.validate_session(g.user.id, session_token, client_ip):
+                        # Session compromised or expired - redirect to login for security
+                        logger.warning(f"Session validation failed for user {g.user.id}")
+                        session.clear()
+                        g.user = None
+                        return redirect(url_for('auth.login'))
+                except Exception as e:
+                    logger.warning(f"Error validating session: {e}")
+                    session.clear()
+                    g.user = None
+            else:
                 session.clear()
-                g.user = None
-                return
-            
-            if not active_session.validate_session(g.user.id, session_token, client_ip):
-                # Session compromised or expired - redirect to login for security
-                logger.warning(f"Session validation failed for user {g.user.id}")
-                session.clear()
-                g.user = None
-                return redirect(url_for('auth.login'))
-        else:
-            session.clear()
+    except Exception as e:
+        logger.error(f"Unexpected error in before_request: {e}")
+        g.user = None
 
 @app.context_processor
 def inject_globals():
@@ -175,8 +203,16 @@ def not_found(error):
 
 @app.errorhandler(500)
 def server_error(error):
-    logger.error(f"Server error: {error}")
-    return render_template('500.html'), 500
+    """Manejo robusto de errores 500"""
+    import traceback
+    logger.error(f"Server error on {request.method} {request.path}: {error}")
+    logger.error(f"Full traceback: {traceback.format_exc()}")
+    try:
+        return render_template('500.html'), 500
+    except Exception as e:
+        # Si no se puede renderizar template, retornar JSON simple
+        logger.error(f"Error rendering 500.html: {e}")
+        return {'error': 'Internal server error'}, 500
 
 @app.errorhandler(403)
 def forbidden(error):
@@ -196,6 +232,10 @@ def method_not_allowed(error):
 @app.route('/health', methods=['GET', 'HEAD'])
 def health_check():
     """Health check endpoint para Render y monitoreo"""
+    # Para HEAD requests, retornar inmediatamente
+    if request.method == 'HEAD':
+        return '', 200
+    
     try:
         # Verifica conexión a BD
         db.session.execute('SELECT 1')
@@ -216,6 +256,10 @@ def health_check():
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
     """Home page"""
+    # Para HEAD requests, retornar inmediatamente
+    if request.method == 'HEAD':
+        return '', 200
+    
     if g.user:
         if g.user.role == 'admin':
             return redirect(url_for('admin.index'))
@@ -230,9 +274,13 @@ def index():
     
     return render_template('index.html')
 
-@app.route('/item/<int:item_id>', methods=['GET', 'POST'])
+@app.route('/item/<int:item_id>', methods=['GET', 'POST', 'HEAD'])
 def view_item(item_id):
     """Ver detalles de un item y procesarcompras/rentas"""
+    # Para HEAD requests, retornar inmediatamente
+    if request.method == 'HEAD':
+        return '', 200
+    
     item = Item.query.get_or_404(item_id)
     
     if request.method == 'POST':
