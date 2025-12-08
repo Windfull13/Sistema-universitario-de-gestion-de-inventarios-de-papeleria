@@ -37,10 +37,23 @@ app.config.from_object(config.get(config_name, config['development']))
 
 # Initialize extensions
 db.init_app(app)
-try:
-    mail = Mail(app)
-except Exception as e:
-    # Mail puede fallar si no hay config de email
+
+# Configurar Mail solo si tenemos credenciales
+MAIL_CONFIG = {
+    'MAIL_SERVER': os.getenv('MAIL_SERVER'),
+    'MAIL_PORT': os.getenv('MAIL_PORT'),
+    'MAIL_USERNAME': os.getenv('MAIL_USERNAME'),
+    'MAIL_PASSWORD': os.getenv('MAIL_PASSWORD'),
+}
+
+# Solo inicializar Mail si tenemos credenciales
+if all(MAIL_CONFIG.values()):
+    try:
+        mail = Mail(app)
+    except Exception as e:
+        logger.warning(f"Mail initialization failed: {e}")
+        mail = None
+else:
     mail = None
 # Limiter deshabilitado temporalmente para debugging
 # limiter = Limiter(
@@ -293,15 +306,7 @@ def view_item(item_id):
     
     return render_template('item.html', item=item)
 
-@app.route('/health')
-def health():
-    """Health check endpoint"""
-    try:
-        db.session.execute('SELECT 1')
-        return {'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()}
-    except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {'status': 'unhealthy', 'error': str(e)}, 500
+
 
 @app.route('/nfc-control', methods=['GET', 'POST'])
 def nfc_control_alias():
@@ -352,17 +357,7 @@ def cleanup_expired_sessions():
 
 if __name__ == '__main__':
     # Initialize database
-    init_db()
-    
-    # Start background scheduler - DESHABILITADO EN PRODUCCIÓN
-    # scheduler = BackgroundScheduler()
-    # scheduler.add_job(check_overdue_rentals, 'interval', minutes=60, id='check_overdue')
-    # scheduler.add_job(cleanup_expired_sessions, 'interval', minutes=30, id='cleanup_sessions')
-    #
-    # try:
-    #     scheduler.start()
-    # except Exception as e:
-    #     logger.error(f"Failed to start scheduler: {e}")
+    init_database()
     
     # Run Flask development server
     try:
@@ -371,5 +366,5 @@ if __name__ == '__main__':
             port=int(os.getenv('FLASK_PORT', 5000)),
             debug=app.debug
         )
-    finally:
-        scheduler.shutdown()
+    except Exception as e:
+        logger.error(f"Failed to start app: {e}")
