@@ -1,40 +1,57 @@
 #!/usr/bin/env python
 """
 Script para limpiar la BD completamente y recrearla
-Ejecutar solo una vez en producción
+Ejecutar en phase 'release' de Render
 """
 import os
 import sys
-from app import app, db
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def clear_and_recreate_db():
     """Drop all tables and recreate them"""
-    with app.app_context():
-        print("=" * 70)
-        print("LIMPIANDO Y RECREANDO BASE DE DATOS")
-        print("=" * 70)
+    logger.info("=" * 70)
+    logger.info("LIMPIANDO Y RECREANDO BASE DE DATOS")
+    logger.info("=" * 70)
+    
+    try:
+        # Import here so we use the current app.py
+        logger.info("Importing Flask app...")
+        from app import app, db
+        logger.info("✓ App imported")
         
-        try:
+        with app.app_context():
             # Drop all
-            print("\n[1/2] Eliminando todas las tablas...")
-            db.drop_all()
-            print("✓ Tablas eliminadas")
+            logger.info("[1/2] Eliminando todas las tablas...")
+            try:
+                db.drop_all()
+                logger.info("✓ Tablas eliminadas")
+            except Exception as e:
+                logger.warning(f"Drop failed (might be empty): {e}")
             
             # Create all
-            print("\n[2/2] Recreando tablas...")
+            logger.info("[2/2] Recreando tablas...")
             db.create_all()
-            print("✓ Tablas recreadas")
+            logger.info("✓ Tablas recreadas")
             
-            print("\n" + "=" * 70)
-            print("✓ BASE DE DATOS COMPLETAMENTE RENOVADA")
-            print("=" * 70)
-            return True
-            
-        except Exception as e:
-            print(f"\n✗ ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-            return False
+            # List tables
+            from sqlalchemy import inspect
+            inspector = inspect(db.engine)
+            tables = inspector.get_table_names()
+            logger.info(f"Tablas creadas: {tables}")
+        
+        logger.info("=" * 70)
+        logger.info("✓ BASE DE DATOS COMPLETAMENTE RENOVADA")
+        logger.info("=" * 70)
+        return True
+        
+    except Exception as e:
+        logger.error(f"ERROR: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 if __name__ == '__main__':
     success = clear_and_recreate_db()
