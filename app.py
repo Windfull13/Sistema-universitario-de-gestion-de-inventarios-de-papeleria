@@ -64,23 +64,35 @@ else:
 
 # Initialize database automatically on startup
 def init_database():
-    """Initialize database tables - very defensive"""
+    """Initialize database tables - very defensive with logging"""
     try:
         with app.app_context():
             try:
+                # Try to create all tables
                 db.create_all()
+                logger.info("Database tables created/verified successfully")
             except Exception as create_error:
-                # Puede fallar si la BD no está lista, pero eso está bien
-                pass
+                # Try to check if table exists
+                try:
+                    from sqlalchemy import inspect
+                    inspector = inspect(db.engine)
+                    tables = inspector.get_table_names()
+                    logger.info(f"Existing tables: {tables}")
+                except:
+                    pass
+                logger.warning(f"Could not create tables: {create_error}")
             return True
     except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
         # No lancemos excepción - la app debe iniciarse aunque la BD falle
         return False
 
 # Ejecutar inicialización
 try:
     db_initialized = init_database()
-except:
+    logger.info(f"Database initialization result: {db_initialized}")
+except Exception as e:
+    logger.error(f"Unexpected error during init: {e}")
     db_initialized = False
 
 # Session configuration for security
