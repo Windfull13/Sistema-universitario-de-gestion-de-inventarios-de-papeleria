@@ -3,15 +3,15 @@ services:
     name: sistema-inventarios
     runtime: python
     plan: free
-    buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn --workers 4 --worker-class sync --threads 2 --bind 0.0.0.0:5000 --timeout 120 --access-logfile - --error-logfile - app:app
+    buildCommand: pip install -r requirements.txt && python init_db.py
+    startCommand: gunicorn --config gunicorn_config.py app:app
     healthCheckPath: /health
     healthCheckInterval: 30
     healthCheckTimeout: 5
     healthCheckMaxRetries: 3
     envVars:
       - key: PYTHON_VERSION
-        value: 3.11.7
+        value: 3.13
       - key: FLASK_ENV
         value: production
     envVarFile: .env

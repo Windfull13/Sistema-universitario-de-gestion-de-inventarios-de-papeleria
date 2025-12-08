@@ -225,27 +225,41 @@ def test():
 # Simple public pages
 @app.route('/', methods=['GET', 'HEAD'])
 def index():
-    """Home page"""
+    """Home page - Ultra defensive"""
     # Para HEAD requests, retornar inmediatamente
     if request.method == 'HEAD':
         return '', 200
     
     try:
-        if g.user:
+        # Primero, check si el usuario está logueado
+        if 'user_id' in session and g.user:
             if g.user.role == 'admin':
                 return redirect(url_for('admin.index'))
             else:
                 return redirect(url_for('student.student'))
         
+        # Intentar cargar el template
         return render_template('index.html')
     except Exception as e:
-        # Si falla el template, retornar HTML simple
+        logger.error(f"Error in index(): {e}")
+        # Fallback a HTML simple
         return '''
+        <!DOCTYPE html>
         <html>
-        <head><title>Sistema de Inventarios</title></head>
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Sistema de Inventarios</title>
+            <style>
+                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+                h1 { color: #333; }
+                p { color: #666; }
+            </style>
+        </head>
         <body>
             <h1>Sistema de Inventarios Universitario</h1>
-            <p>Cargando...</p>
+            <p>Inicializando sistema...</p>
+            <p><small>Recarga la página en unos segundos</small></p>
         </body>
         </html>
         ''', 200
