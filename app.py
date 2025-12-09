@@ -329,6 +329,24 @@ def index():
         return render_template('index.html')
     except Exception as e:
         logger.error(f"Error in index: {e}")
+        return render_template('index.html')
+
+# Item detail page
+@app.route('/item/<int:item_id>')
+def item_detail(item_id):
+    """Public item detail page"""
+    try:
+        if not db_available:
+            return render_template('404.html'), 404
+        
+        from models import Item
+        item = Item.query.get_or_404(item_id)
+        
+        return render_template('item.html', item=item)
+    except Exception as e:
+        logger.error(f"Error in item_detail: {e}")
+        return render_template('404.html'), 404
+        logger.error(f"Error in index: {e}")
         return '''
         <!DOCTYPE html>
         <html>

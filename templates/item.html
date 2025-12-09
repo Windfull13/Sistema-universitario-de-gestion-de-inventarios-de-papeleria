@@ -1,110 +1,188 @@
 <!doctype html>
 <html lang="es">
-  <head>
+<head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ item.name }}</title>
+    <title>{{ item.name }} - Papelería Universitaria</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  </head>
-  <body class="bg-light">
-    <div class="container py-4">
-      <a href="/">← Volver</a>
-      
-      {% if success %}
-        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
-          {{ success }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .navbar { background: rgba(255,255,255,0.95); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .product-card { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }
+        .product-image { background: #f8f9fa; display: flex; align-items: center; justify-content: center; min-height: 300px; }
+        .product-image img { max-width: 100%; max-height: 300px; object-fit: contain; }
+        .price { font-size: 2rem; font-weight: bold; color: #667eea; }
+        .category-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 20px; padding: 5px 15px; display: inline-block; }
+        .btn-buy { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; font-weight: 600; padding: 10px 30px; border-radius: 8px; }
+        .btn-buy:hover { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4); }
+        .btn-rent { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border: none; color: white; font-weight: 600; padding: 10px 30px; border-radius: 8px; }
+        .btn-rent:hover { background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%); color: white; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4); }
+        .qr-section { background: #f8f9fa; padding: 20px; border-radius: 10px; text-align: center; }
+        .qr-section img { max-width: 200px; border: 2px solid #667eea; padding: 10px; background: white; border-radius: 8px; }
+        .stock-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-weight: 600; }
+        .stock-available { background: #d4edda; color: #155724; }
+        .stock-low { background: #fff3cd; color: #856404; }
+        .stock-out { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light">
+        <div class="container-fluid">
+            <a class="navbar-brand fw-bold" href="/">
+                <i class="bi bi-book me-2"></i>Papelería Universitaria
+            </a>
+            <div class="ms-auto">
+                {% if current_user %}
+                    <span class="me-3">{{ current_user.username }}</span>
+                    <a href="/logout" class="btn btn-outline-secondary btn-sm">Salir</a>
+                {% else %}
+                    <a href="/login" class="btn btn-outline-primary btn-sm me-2">Iniciar sesión</a>
+                {% endif %}
+            </div>
         </div>
-      {% endif %}
-      
-      {% if error %}
-        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
-          {{ error }}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container py-5">
+        <div class="mb-3">
+            <a href="/" class="text-white text-decoration-none">
+                <i class="bi bi-arrow-left"></i> Volver al inicio
+            </a>
         </div>
-      {% endif %}
-      <div class="row mt-3">
-        <div class="col-md-8">
-          <h2>{{ item.name }}</h2>
-          <p class="text-muted">{{ item.category }}</p>
-          {% if item.image_filename %}
-            <img src="{{ url_for('static', filename='uploads/' ~ item.image_filename) }}" alt="Imagen" class="img-fluid mb-3" style="max-height:320px; object-fit:cover;">
-          {% endif %}
-          <p>{{ item.description }}</p>
-          <p><strong>Precio:</strong> ${{ item.price|int }} COP | <strong>Stock:</strong> {{ item.stock }}</p>
-          <div class="mt-3">
-            <h5>Código QR</h5>
-            <img src="{{ url_for('static', filename='uploads/qr/qr_item_' ~ item.id ~ '.png') }}" alt="QR" style="max-width:200px; border:1px solid #ddd; padding:5px;" onerror="this.style.display='none'">
-            <p class="text-muted" id="qr-error" style="display:none;">QR no disponible</p>
-          </div>
-        </div>
-        <div class="col-md-4">
-          <div class="card p-3">
-            {% if current_user and current_user.role == 'admin' %}
-              <div class="mb-2">
-                <label class="form-label">Stock actual</label>
-                <p class="form-control-plaintext">{{ item.stock }}</p>
-              </div>
 
-              <form method="post" action="/admin/adjust_stock/{{ item.id }}" class="mb-3">
-                <div class="mb-2">
-                  <label class="form-label">Ajuste (usar número negativo para restar)</label>
-                  <input type="number" name="qty" value="0" class="form-control">
-                </div>
-                <div class="d-flex gap-2">
-                  <button type="submit" class="btn btn-primary">Aplicar ajuste</button>
-                </div>
-              </form>
-
-              <form method="post" action="/admin/edit/{{ item.id }}" enctype="multipart/form-data" class="mb-2">
-                <input type="hidden" name="name" value="{{ item.name }}">
-                <input type="hidden" name="description" value="{{ item.description }}">
-                <input type="hidden" name="category" value="{{ item.category }}">
-                <input type="hidden" name="price" value="{{ item.price }}">
-                <input type="hidden" name="stock" value="{{ item.stock }}">
-                <div class="d-grid gap-2">
-                  <button class="btn btn-outline-primary">Editar item (abrir panel admin)</button>
-                </div>
-              </form>
-
-              <form method="post" action="/admin/delete/{{ item.id }}" onsubmit="return confirm('¿Eliminar este item?');">
-                <button type="submit" class="btn btn-outline-danger">Eliminar item</button>
-              </form>
-
-            {% else %}
-              <form method="post">
-                <div class="mb-3">
-                  <label class="form-label">Cantidad</label>
-                  <input type="number" name="qty" value="1" min="1" max="{{ item.stock }}" class="form-control">
-                  <small class="text-muted">Disponible: {{ item.stock }}</small>
-                </div>
-                
-                <div class="d-grid gap-2">
-                  <button name="action" value="buy" class="btn btn-success btn-lg">
-                    💳 Comprar - ${{ item.price|int }} COP
-                  </button>
-                  
-                  {% if item.rentable %}
-                    <hr>
-                    <h6>Rentar este producto</h6>
-                    <div class="mb-2">
-                      <label class="form-label">Fecha de inicio</label>
-                      <input type="date" name="start_date" class="form-control" required>
+        <div class="product-card">
+            <div class="row g-0">
+                <!-- Left: Image and QR -->
+                <div class="col-md-6">
+                    <div class="product-image">
+                        {% if item.image_filename %}
+                            <img src="{{ url_for('static', filename='uploads/' ~ item.image_filename) }}" alt="{{ item.name }}">
+                        {% else %}
+                            <div class="text-center text-muted">
+                                <i class="bi bi-image" style="font-size: 4rem;"></i>
+                                <p>Sin imagen</p>
+                            </div>
+                        {% endif %}
                     </div>
-                    <div class="mb-2">
-                      <label class="form-label">Días a rentar</label>
-                      <input type="number" name="days" value="7" min="1" max="30" class="form-control" required>
+
+                    <!-- QR Code -->
+                    <div class="p-4 qr-section">
+                        <h6 class="mb-3">Código QR</h6>
+                        {% set qr_url = url_for('nfc.qr_item', item_id=item.id) %}
+                        <img src="{{ qr_url }}" alt="QR Code" class="img-fluid">
+                        <p class="text-muted text-sm mt-2">Escanea para acceder rápidamente</p>
                     </div>
-                    <button name="action" value="rent" class="btn btn-warning btn-lg">
-                      📦 Rentar por {{ request.form.get('days', 7) }} días
-                    </button>
-                  {% endif %}
                 </div>
-              </form>
-            {% endif %}
-          </div>
+
+                <!-- Right: Details -->
+                <div class="col-md-6 p-4">
+                    <!-- Category -->
+                    <div class="mb-2">
+                        <span class="category-badge">{{ item.category }}</span>
+                    </div>
+
+                    <!-- Title -->
+                    <h1 class="mb-2" style="color: #333;">{{ item.name }}</h1>
+
+                    <!-- Description -->
+                    <p class="text-muted mb-3">{{ item.description }}</p>
+
+                    <!-- Price and Stock -->
+                    <div class="mb-4">
+                        <div class="price mb-2">
+                            ${{ "{:,}".format(item.price|int) }} COP
+                        </div>
+                        
+                        <!-- Stock Status -->
+                        {% if item.stock > 10 %}
+                            <span class="stock-badge stock-available">
+                                <i class="bi bi-check-circle"></i> {{ item.stock }} en stock
+                            </span>
+                        {% elif item.stock > 0 %}
+                            <span class="stock-badge stock-low">
+                                <i class="bi bi-exclamation-triangle"></i> {{ item.stock }} disponibles (stock bajo)
+                            </span>
+                        {% else %}
+                            <span class="stock-badge stock-out">
+                                <i class="bi bi-x-circle"></i> Sin stock
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Features -->
+                    <div class="mb-4">
+                        <strong>Disponibilidad:</strong>
+                        <ul class="mb-0">
+                            <li><i class="bi bi-check text-success"></i> Disponible para compra</li>
+                            {% if item.rentable %}
+                                <li><i class="bi bi-check text-success"></i> Disponible para renta</li>
+                            {% else %}
+                                <li><i class="bi bi-x text-danger"></i> No disponible para renta</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 mb-3">
+                        {% if item.stock > 0 and current_user and current_user.role == 'student' %}
+                        {% if item.stock > 0 and current_user and current_user.role == 'student' %}
+                            <!-- Buy Button -->
+                            <form method="POST" action="/api/buy" class="mb-2">
+                                <input type="hidden" name="item_id" value="{{ item.id }}">
+                                <input type="hidden" name="quantity" value="1">
+                                <button type="submit" class="btn btn-buy w-100">
+                                    <i class="bi bi-cart-plus"></i> Comprar
+                                </button>
+                            </form>
+
+                            <!-- Rent Button (if rentable) -->
+                            {% if item.rentable %}
+                                <form method="POST" action="/api/rent" class="mb-2">
+                                    <input type="hidden" name="item_id" value="{{ item.id }}">
+                                    <div class="input-group mb-2">
+                                        <input type="number" class="form-control" name="days" placeholder="Días" min="1" max="30" value="7" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-rent w-100">
+                                        <i class="bi bi-clock-history"></i> Rentar
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% elif item.stock == 0 and current_user and current_user.role == 'student' %}
+                            <div class="alert alert-warning text-center">
+                                <i class="bi bi-info-circle"></i> Sin stock disponible
+                            </div>
+                        {% elif not current_user %}
+                            <a href="/login" class="btn btn-buy w-100">
+                                <i class="bi bi-lock"></i> Inicia sesión
+                            </a>
+                        {% endif %}
+
+                        <!-- Admin Actions -->
+                        {% if current_user and current_user.role == 'admin' %}
+                            <a href="/admin/items/{{ item.id }}/edit" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-pencil"></i> Editar producto
+                            </a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Additional Info -->
+                    <div class="alert alert-info" role="alert">
+                        <small>
+                            <strong>ID:</strong> {{ item.id }}
+                        </small>
+                    </div>
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </body>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-4 mt-5">
+        <p>&copy; 2025 Papelería Universitaria.</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
 </html>
