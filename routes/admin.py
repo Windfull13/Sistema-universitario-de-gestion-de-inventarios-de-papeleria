@@ -75,7 +75,8 @@ def admin_items():
     if category:
         query = query.filter_by(category=category)
     
-    items = query.paginate(page=page, per_page=20)
+    # Ordenar por categoría y luego por nombre (para mantener orden consistente)
+    items = query.order_by(Item.category, Item.name).paginate(page=page, per_page=20)
     categories = db.session.query(Item.category).distinct().all()
     
     return render_template('admin_items.html', 
