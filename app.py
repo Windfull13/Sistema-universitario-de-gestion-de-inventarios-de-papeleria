@@ -6,6 +6,7 @@ This is the production version that runs on Render
 import os
 import sys
 import logging
+import random
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, session, g, redirect, url_for
 
@@ -108,6 +109,114 @@ if db_available:
                     logger.info(f"Seeded {total} products from seed_products.py")
                 except Exception as e:
                     logger.warning(f"Could not seed products: {e}")
+            
+            # Seed example data (suppliers, transactions, purchase orders, extensions)
+            from models import Supplier
+            if Supplier.query.count() == 0:
+                try:
+                    import random
+                    from models import Transaction, PurchaseOrder
+                    
+                    # Create suppliers
+                    suppliers_data = [
+                        {'name': 'Papelera Central', 'email': 'ventas@paperacentral.com', 'phone': '+57 301 1234567', 'city': 'Bogotá', 'contact': 'Juan Pérez'},
+                        {'name': 'Distribuidora El Lápiz', 'email': 'contacto@lapiz.com', 'phone': '+57 312 9876543', 'city': 'Medellín', 'contact': 'María García'},
+                        {'name': 'Importadora Escolar', 'email': 'import@escolar.co', 'phone': '+57 321 5555555', 'city': 'Cali', 'contact': 'Carlos López'},
+                        {'name': 'Artículos de Oficina Premium', 'email': 'premium@oficina.co', 'phone': '+57 310 7777777', 'city': 'Barranquilla', 'contact': 'Ana Rodríguez'}
+                    ]
+                    for sup_data in suppliers_data:
+                        supplier = Supplier(**sup_data)
+                        db.session.add(supplier)
+                    db.session.commit()
+                    logger.info(f"Seeded {len(suppliers_data)} suppliers")
+                    
+                    # Create students
+                    students_data = [
+                        {'username': 'juan.perez', 'email': 'juan@university.edu'},
+                        {'username': 'maria.garcia', 'email': 'maria@university.edu'},
+                        {'username': 'carlos.lopez', 'email': 'carlos@university.edu'},
+                        {'username': 'ana.rodriguez', 'email': 'ana@university.edu'},
+                    ]
+                    for std_data in students_data:
+                        existing = User.query.filter_by(username=std_data['username']).first()
+                        if not existing:
+                            from werkzeug.security import generate_password_hash
+                            student = User(
+                                username=std_data['username'],
+                                email=std_data['email'],
+                                password_hash=generate_password_hash('student123'),
+                                role='student'
+                            )
+                            db.session.add(student)
+                    db.session.commit()
+                    logger.info(f"Seeded {len(students_data)} students")
+                    
+                    # Create transactions and purchase orders
+                    items = Item.query.all()
+                    suppliers = Supplier.query.all()
+                    students = User.query.filter_by(role='student').all()
+                    
+                    if items and suppliers and students:
+                        # 20 transactions
+                        for i in range(20):
+                            random_item = random.choice(items)
+                            random_student = random.choice(students)
+                            is_rental = random.choice([True, False])
+                            days_ago = random.randint(0, 60)
+                            trans_date = datetime.utcnow() - timedelta(days=days_ago)
+                            
+                            transaction = Transaction(
+                                user_id=random_student.id,
+                                item_id=random_item.id,
+                                kind='rent' if is_rental else 'buy',
+                                qty=random.randint(1, 3),
+                                timestamp=trans_date
+                            )
+                            
+                            if is_rental:
+                                transaction.rent_start_date = trans_date.date()
+                                transaction.rent_days = random.randint(3, 14)
+                                transaction.rent_due_date = (trans_date + timedelta(days=transaction.rent_days)).date()
+                                transaction.returned = random.choice([True, False])
+                                if transaction.returned:
+                                    transaction.return_date = trans_date + timedelta(days=random.randint(2, 15))
+                            
+                            db.session.add(transaction)
+                        
+                        # 15 purchase orders
+                        for i in range(15):
+                            random_supplier = random.choice(suppliers)
+                            random_item = random.choice(items)
+                            days_ago = random.randint(0, 90)
+                            po_date = datetime.utcnow() - timedelta(days=days_ago)
+                            
+                            purchase_order = PurchaseOrder(
+                                supplier_id=random_supplier.id,
+                                item_id=random_item.id,
+                                quantity=random.randint(10, 100),
+                                unit_price=random_item.price * 0.7,
+                                order_date=po_date,
+                                expected_delivery_date=po_date + timedelta(days=random.randint(5, 30)),
+                                status=random.choice(['pending', 'delivered', 'cancelled'])
+                            )
+                            purchase_order.total_cost = purchase_order.quantity * purchase_order.unit_price
+                            db.session.add(purchase_order)
+                        
+                        db.session.commit()
+                        logger.info("Seeded 20 transactions and 15 purchase orders")
+                        
+                        # Create rental extensions
+                        rentals = Transaction.query.filter_by(kind='rent').limit(8).all()
+                        for rental in rentals:
+                            rental.extension_requested = True
+                            rental.extension_days = random.randint(3, 7)
+                            rental.extension_approved = True
+                            rental.extension_approved_at = datetime.utcnow() - timedelta(days=random.randint(1, 5))
+                        db.session.commit()
+                        logger.info(f"Seeded 8 rental extensions")
+                    
+                except Exception as e:
+                    logger.warning(f"Could not seed example data: {e}")
                     
     except Exception as e:
         logger.warning(f"Could not create tables: {e}")
