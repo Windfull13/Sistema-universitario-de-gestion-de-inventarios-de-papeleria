@@ -452,6 +452,7 @@ def item_detail(item_id):
                 
                 item.image_filename = filename
                 db.session.commit()
+                db.session.refresh(item)  # Refresh to ensure item has updated filename
             except Exception as e:
                 logger.warning(f"Could not generate image for item {item_id}: {e}")
         
