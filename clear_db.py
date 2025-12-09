@@ -128,5 +128,45 @@ if __name__ == '__main__':
                     
         except Exception as e:
             logger.warning(f"Could not create admin user: {e}")
+        
+        # Now seed products
+        logger.info("=" * 70)
+        logger.info("AGREGANDO PRODUCTOS A LA BASE DE DATOS")
+        logger.info("=" * 70)
+        try:
+            from app import app, db
+            from models import Item
+            
+            with app.app_context():
+                # Check if products already exist
+                existing = Item.query.first()
+                if existing:
+                    count = Item.query.count()
+                    logger.info(f"✓ Base de datos ya tiene {count} productos")
+                else:
+                    # Import products list
+                    from seed_products import PRODUCTS
+                    
+                    total_added = 0
+                    for category, products in PRODUCTS.items():
+                        logger.info(f"📂 Categoría: {category}")
+                        for product in products:
+                            item = Item(
+                                name=product['name'],
+                                description=product.get('description', ''),
+                                category=category,
+                                price=product['price'],
+                                stock=product['stock'],
+                                rentable=product['rentable']
+                            )
+                            db.session.add(item)
+                            total_added += 1
+                        
+                        db.session.commit()
+                    
+                    logger.info(f"✓ {total_added} PRODUCTOS AGREGADOS EXITOSAMENTE")
+                    
+        except Exception as e:
+            logger.warning(f"Could not seed products: {e}")
     
     sys.exit(0 if success else 1)
