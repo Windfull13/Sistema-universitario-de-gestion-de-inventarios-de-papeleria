@@ -458,10 +458,18 @@ def generate_item_image(item_id):
         img.save(buf, format='PNG')
         buf.seek(0)
         
-        return send_file(buf, mimetype='image/png', download_name=f'item_{item_id}.png')
+        response = send_file(buf, mimetype='image/png', download_name=f'item_{item_id}.png')
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
+        return response
+    except ImportError as e:
+        logger.error(f"Import error generating image for item {item_id}: {e}")
+        # Return error image in plain text for debugging
+        return f"Error: PIL not available - {e}", 500
     except Exception as e:
-        logger.error(f"Error generating image for item {item_id}: {e}")
-        return render_template('404.html'), 404
+        logger.error(f"Error generating image for item {item_id}: {e}", exc_info=True)
+        return f"Error: {e}", 500
 
 
 # Register blueprints if possible
