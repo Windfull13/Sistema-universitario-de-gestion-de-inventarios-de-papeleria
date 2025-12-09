@@ -110,6 +110,58 @@ if db_available:
                 except Exception as e:
                     logger.warning(f"Could not seed products: {e}")
             
+            # Generate placeholder images if not exists
+            if Item.query.filter(Item.image_filename == None).count() > 0:
+                try:
+                    from PIL import Image, ImageDraw
+                    import os
+                    
+                    colors = {
+                        'Papeles': '#E8F5E9',
+                        'Escritura': '#F3E5F5',
+                        'Cuadernos y libretas': '#E3F2FD',
+                        'Organización y archivo': '#FFF3E0',
+                        'Corte, pegado y fijación': '#FCE4EC',
+                        'Arte y manualidades': '#F1F8E9',
+                        'Instrumentos de geometría': '#E0F2F1',
+                        'Tecnología ligera': '#ECE7FF',
+                        'Impresión': '#F8F5FF',
+                        'Oficina': '#FFF8E1',
+                        'Escolares': '#E8EAF6',
+                        'Otros productos': '#F5F5F5'
+                    }
+                    
+                    img_dir = 'static/uploads'
+                    os.makedirs(img_dir, exist_ok=True)
+                    
+                    items_without_image = Item.query.filter(Item.image_filename == None).all()
+                    for item in items_without_image:
+                        try:
+                            color = colors.get(item.category, '#F5F5F5')
+                            hex_color = color.lstrip('#')
+                            rgb = tuple(int(hex_color[j:j+2], 16) for j in (0, 2, 4))
+                            
+                            img = Image.new('RGB', (400, 300), color=rgb)
+                            draw = ImageDraw.Draw(img)
+                            text = item.name[:40]
+                            bbox = draw.textbbox((0, 0), text)
+                            text_width = bbox[2] - bbox[0]
+                            text_height = bbox[3] - bbox[1]
+                            x = (400 - text_width) // 2
+                            y = (300 - text_height) // 2
+                            draw.text((x, y), text, fill=(64, 64, 64))
+                            
+                            filename = f"{img_dir}/item_{item.id}.png"
+                            img.save(filename)
+                            item.image_filename = f"item_{item.id}.png"
+                            db.session.add(item)
+                        except:
+                            pass
+                    db.session.commit()
+                    logger.info(f"Generated placeholder images for items")
+                except Exception as e:
+                    logger.warning(f"Could not generate placeholder images: {e}")
+            
             # Seed example data (suppliers, transactions, purchase orders, extensions)
             from models import Supplier
             if Supplier.query.count() == 0:
