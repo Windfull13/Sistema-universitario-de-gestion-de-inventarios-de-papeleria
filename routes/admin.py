@@ -371,3 +371,15 @@ def extend_rental(transaction_id):
         flash(f'Error: {str(e)}', 'danger')
     
     return redirect(url_for('admin.admin_rental_extensions'))
+
+@admin_bp.route('/nfc-control')
+@admin_required
+def nfc_control():
+    """Control NFC/QR para admin"""
+    try:
+        items = Item.query.all()
+        return render_template('nfc_control.html', items=items)
+    except Exception as e:
+        logger.error(f"Error en nfc_control: {e}")
+        flash('Error cargando control NFC', 'danger')
+        return redirect(url_for('admin.dashboard'))
