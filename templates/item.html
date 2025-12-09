@@ -127,7 +127,6 @@
                     <!-- Action Buttons -->
                     <div class="d-grid gap-2 mb-3">
                         {% if item.stock > 0 and current_user and current_user.role == 'student' %}
-                        {% if item.stock > 0 and current_user and current_user.role == 'student' %}
                             <!-- Buy Button -->
                             <form method="POST" action="/api/buy" class="mb-2">
                                 <input type="hidden" name="item_id" value="{{ item.id }}">
