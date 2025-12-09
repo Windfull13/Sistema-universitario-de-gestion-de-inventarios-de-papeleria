@@ -29,8 +29,8 @@ def qr_item(item_id):
         # URL que apunta al detalle del item (funciona en localhost y en Render)
         url = get_item_url(item_id)
         
-        # Generar QR con segno
-        qr = segno.make_micro(url, error='m')
+        # Generar QR con segno (usar make en lugar de make_micro para URLs largas)
+        qr = segno.make(url, error='L', micro=False)
         
         # Convertir a PNG
         buf = BytesIO()
