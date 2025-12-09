@@ -68,6 +68,47 @@ if db_available:
         with app.app_context():
             db.create_all()
             logger.info("Database tables created/verified")
+            
+            # Initialize admin user if doesn't exist
+            from werkzeug.security import generate_password_hash
+            admin = User.query.filter_by(username='admin').first()
+            if not admin:
+                try:
+                    admin = User(
+                        username='admin',
+                        email='admin@sistema.local',
+                        password_hash=generate_password_hash('admin123'),
+                        role='admin'
+                    )
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("Admin user created (admin/admin123)")
+                except Exception as e:
+                    logger.warning(f"Could not create admin: {e}")
+            
+            # Seed products if database is empty
+            from models import Item
+            if Item.query.count() == 0:
+                try:
+                    from seed_products import PRODUCTS
+                    total = 0
+                    for category, products in PRODUCTS.items():
+                        for product in products:
+                            item = Item(
+                                name=product['name'],
+                                description=product.get('description', ''),
+                                category=category,
+                                price=product['price'],
+                                stock=product['stock'],
+                                rentable=product['rentable']
+                            )
+                            db.session.add(item)
+                            total += 1
+                    db.session.commit()
+                    logger.info(f"Seeded {total} products from seed_products.py")
+                except Exception as e:
+                    logger.warning(f"Could not seed products: {e}")
+                    
     except Exception as e:
         logger.warning(f"Could not create tables: {e}")
         db_available = False
