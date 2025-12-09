@@ -96,4 +96,37 @@ if __name__ == '__main__':
     
     # Then clean and recreate
     success = clear_and_recreate_db()
+    
+    if success:
+        # Create default admin user
+        logger.info("=" * 70)
+        logger.info("CREANDO USUARIO ADMIN DE PRUEBA")
+        logger.info("=" * 70)
+        try:
+            from app import app, db
+            from models import User
+            from werkzeug.security import generate_password_hash
+            
+            with app.app_context():
+                # Check if admin already exists
+                admin = User.query.filter_by(username='admin').first()
+                if admin:
+                    logger.info("✓ Usuario admin ya existe")
+                else:
+                    # Create admin user
+                    admin = User(
+                        username='admin',
+                        email='admin@sistema.local',
+                        password_hash=generate_password_hash('admin123'),
+                        role='admin'
+                    )
+                    db.session.add(admin)
+                    db.session.commit()
+                    logger.info("✓ Usuario admin creado")
+                    logger.info("  Usuario: admin")
+                    logger.info("  Contraseña: admin123")
+                    
+        except Exception as e:
+            logger.warning(f"Could not create admin user: {e}")
+    
     sys.exit(0 if success else 1)
