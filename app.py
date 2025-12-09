@@ -8,7 +8,7 @@ import sys
 import logging
 import random
 from datetime import datetime, timedelta
-from flask import Flask, render_template, request, session, g, redirect, url_for
+from flask import Flask, render_template, request, session, g, redirect, url_for, send_file
 
 # Logging setup
 logging.basicConfig(
@@ -409,78 +409,60 @@ def item_detail(item_id):
         
         from models import Item
         item = Item.query.get_or_404(item_id)
-        
-        # Ensure item has an image filename
-        if not item.image_filename:
-            try:
-                from PIL import Image, ImageDraw
-                import os
-                
-                colors = {
-                    'Papeles': '#E8F5E9',
-                    'Escritura': '#F3E5F5',
-                    'Cuadernos y libretas': '#E3F2FD',
-                    'Organización y archivo': '#FFF3E0',
-                    'Corte, pegado y fijación': '#FCE4EC',
-                    'Arte y manualidades': '#F1F8E9',
-                    'Instrumentos de geometría': '#E0F2F1',
-                    'Tecnología ligera': '#ECE7FF',
-                    'Impresión': '#F8F5FF',
-                    'Oficina': '#FFF8E1',
-                    'Escolares': '#E8EAF6',
-                    'Otros productos': '#F5F5F5'
-                }
-                
-                color = colors.get(item.category, '#F5F5F5')
-                hex_color = color.lstrip('#')
-                rgb = tuple(int(hex_color[j:j+2], 16) for j in (0, 2, 4))
-                
-                img = Image.new('RGB', (400, 300), color=rgb)
-                draw = ImageDraw.Draw(img)
-                text = item.name[:40]
-                bbox = draw.textbbox((0, 0), text)
-                text_width = bbox[2] - bbox[0]
-                text_height = bbox[3] - bbox[1]
-                x = (400 - text_width) // 2
-                y = (300 - text_height) // 2
-                draw.text((x, y), text, fill=(64, 64, 64))
-                
-                img_dir = 'static/uploads'
-                os.makedirs(img_dir, exist_ok=True)
-                filename = f"item_{item.id}.png"
-                img.save(f"{img_dir}/{filename}")
-                
-                item.image_filename = filename
-                db.session.commit()
-                db.session.refresh(item)  # Refresh to ensure item has updated filename
-            except Exception as e:
-                logger.warning(f"Could not generate image for item {item_id}: {e}")
-        
         return render_template('item.html', item=item)
     except Exception as e:
         logger.error(f"Error in item_detail: {e}")
         return render_template('404.html'), 404
-        logger.error(f"Error in index: {e}")
-        return '''
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Sistema de Inventarios</title>
-            <style>
-                body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-                h1 { color: #333; }
-                p { color: #666; }
-            </style>
-        </head>
-        <body>
-            <h1>Sistema de Inventarios Universitario</h1>
-            <p>Inicializando sistema...</p>
-            <p><small>Por favor recarga la página en unos momentos</small></p>
-        </body>
-        </html>
-        ''', 200
+
+# Dynamic image generation route
+@app.route('/api/item/<int:item_id>/image')
+def generate_item_image(item_id):
+    """Generate item placeholder image on-the-fly"""
+    try:
+        from models import Item
+        from PIL import Image, ImageDraw
+        from io import BytesIO
+        
+        item = Item.query.get_or_404(item_id)
+        
+        colors = {
+            'Papeles': '#E8F5E9',
+            'Escritura': '#F3E5F5',
+            'Cuadernos y libretas': '#E3F2FD',
+            'Organización y archivo': '#FFF3E0',
+            'Corte, pegado y fijación': '#FCE4EC',
+            'Arte y manualidades': '#F1F8E9',
+            'Instrumentos de geometría': '#E0F2F1',
+            'Tecnología ligera': '#ECE7FF',
+            'Impresión': '#F8F5FF',
+            'Oficina': '#FFF8E1',
+            'Escolares': '#E8EAF6',
+            'Otros productos': '#F5F5F5'
+        }
+        
+        color = colors.get(item.category, '#F5F5F5')
+        hex_color = color.lstrip('#')
+        rgb = tuple(int(hex_color[j:j+2], 16) for j in (0, 2, 4))
+        
+        img = Image.new('RGB', (400, 300), color=rgb)
+        draw = ImageDraw.Draw(img)
+        text = item.name[:40]
+        bbox = draw.textbbox((0, 0), text)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        x = (400 - text_width) // 2
+        y = (300 - text_height) // 2
+        draw.text((x, y), text, fill=(64, 64, 64))
+        
+        buf = BytesIO()
+        img.save(buf, format='PNG')
+        buf.seek(0)
+        
+        return send_file(buf, mimetype='image/png', download_name=f'item_{item_id}.png')
+    except Exception as e:
+        logger.error(f"Error generating image for item {item_id}: {e}")
+        return render_template('404.html'), 404
+
 
 # Register blueprints if possible
 try:

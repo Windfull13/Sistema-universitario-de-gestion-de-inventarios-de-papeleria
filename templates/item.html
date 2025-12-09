@@ -57,14 +57,7 @@
                 <!-- Left: Image and QR -->
                 <div class="col-md-6">
                     <div class="product-image">
-                        {% if item.image_filename %}
-                            <img src="{{ url_for('static', filename='uploads/' ~ item.image_filename) }}" alt="{{ item.name }}">
-                        {% else %}
-                            <div class="text-center text-muted">
-                                <i class="bi bi-image" style="font-size: 4rem;"></i>
-                                <p>Sin imagen</p>
-                            </div>
-                        {% endif %}
+                        <img src="{{ url_for('generate_item_image', item_id=item.id) }}" alt="{{ item.name }}">
                     </div>
 
                     <!-- QR Code -->
