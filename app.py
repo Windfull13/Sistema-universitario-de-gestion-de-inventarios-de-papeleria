@@ -110,32 +110,43 @@ if db_available:
                 except Exception as e:
                     logger.warning(f"Could not seed products: {e}")
             
-            # Generate placeholder images if not exists
-            if Item.query.filter(Item.image_filename == None).count() > 0:
-                try:
-                    from PIL import Image, ImageDraw
-                    import os
-                    
-                    colors = {
-                        'Papeles': '#E8F5E9',
-                        'Escritura': '#F3E5F5',
-                        'Cuadernos y libretas': '#E3F2FD',
-                        'Organización y archivo': '#FFF3E0',
-                        'Corte, pegado y fijación': '#FCE4EC',
-                        'Arte y manualidades': '#F1F8E9',
-                        'Instrumentos de geometría': '#E0F2F1',
-                        'Tecnología ligera': '#ECE7FF',
-                        'Impresión': '#F8F5FF',
-                        'Oficina': '#FFF8E1',
-                        'Escolares': '#E8EAF6',
-                        'Otros productos': '#F5F5F5'
-                    }
-                    
-                    img_dir = 'static/uploads'
-                    os.makedirs(img_dir, exist_ok=True)
-                    
-                    items_without_image = Item.query.filter(Item.image_filename == None).all()
-                    for item in items_without_image:
+            # Generate placeholder images if not exists (check both DB and filesystem)
+            try:
+                from PIL import Image, ImageDraw
+                import os
+                
+                colors = {
+                    'Papeles': '#E8F5E9',
+                    'Escritura': '#F3E5F5',
+                    'Cuadernos y libretas': '#E3F2FD',
+                    'Organización y archivo': '#FFF3E0',
+                    'Corte, pegado y fijación': '#FCE4EC',
+                    'Arte y manualidades': '#F1F8E9',
+                    'Instrumentos de geometría': '#E0F2F1',
+                    'Tecnología ligera': '#ECE7FF',
+                    'Impresión': '#F8F5FF',
+                    'Oficina': '#FFF8E1',
+                    'Escolares': '#E8EAF6',
+                    'Otros productos': '#F5F5F5'
+                }
+                
+                img_dir = 'static/uploads'
+                os.makedirs(img_dir, exist_ok=True)
+                
+                # Get all items that either have no filename or whose file doesn't exist
+                all_items = Item.query.all()
+                items_to_generate = []
+                for item in all_items:
+                    if not item.image_filename:
+                        items_to_generate.append(item)
+                    else:
+                        img_path = f"{img_dir}/{item.image_filename}"
+                        if not os.path.exists(img_path):
+                            items_to_generate.append(item)
+                
+                if items_to_generate:
+                    logger.info(f"Generating images for {len(items_to_generate)} items...")
+                    for item in items_to_generate:
                         try:
                             color = colors.get(item.category, '#F5F5F5')
                             hex_color = color.lstrip('#')
@@ -151,16 +162,21 @@ if db_available:
                             y = (300 - text_height) // 2
                             draw.text((x, y), text, fill=(64, 64, 64))
                             
-                            filename = f"{img_dir}/item_{item.id}.png"
-                            img.save(filename)
-                            item.image_filename = f"item_{item.id}.png"
-                            db.session.add(item)
-                        except:
-                            pass
+                            filename = f"item_{item.id}.png"
+                            img_path = f"{img_dir}/{filename}"
+                            img.save(img_path)
+                            
+                            if not item.image_filename:
+                                item.image_filename = filename
+                                db.session.add(item)
+                        except Exception as e:
+                            logger.warning(f"Could not generate image for item {item.id}: {e}")
                     db.session.commit()
-                    logger.info(f"Generated placeholder images for items")
-                except Exception as e:
-                    logger.warning(f"Could not generate placeholder images: {e}")
+                    logger.info(f"Generated {len(items_to_generate)} placeholder images")
+            except ImportError:
+                logger.warning("Pillow not available, skipping image generation")
+            except Exception as e:
+                logger.warning(f"Could not generate placeholder images: {e}")
             
             # Seed example data (suppliers, transactions, purchase orders, extensions)
             from models import Supplier
