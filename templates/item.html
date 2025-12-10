@@ -63,7 +63,7 @@
                     <!-- QR Code -->
                     <div class="p-4 qr-section">
                         <h6 class="mb-3">Código QR</h6>
-                        <img src="{{ url_for('static', filename='uploads/qr/item_' ~ item.id ~ '_qr.png') }}" alt="Código QR para {{ item.name }}" class="img-fluid">
+                        <img src="{{ url_for('static', filename='uploads/item_' ~ item.id ~ '.png') }}" alt="Código QR para {{ item.name }}" class="img-fluid">
                         <p class="text-muted text-sm mt-2">Escanea para acceder rápidamente</p>
                     </div>
                 </div>
