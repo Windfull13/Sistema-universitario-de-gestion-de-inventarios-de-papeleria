@@ -55,21 +55,26 @@ def register_middleware(app: Flask, db_available: bool):
     def not_found(error):
         try:
             return render_template('404.html'), 404
-        except:
+        except Exception as e:
+            logger.error(f"Error rendering 404 template: {e}")
             return {'error': 'Not found'}, 404
     
     @app.errorhandler(500)
     def server_error(error):
+        """Handle 500 errors - ultra defensive"""
+        logger.error(f"500 Error: {error}", exc_info=True)
         try:
             return render_template('500.html'), 500
-        except:
-            return {'error': 'Internal server error'}, 500
+        except Exception as e:
+            logger.error(f"Error rendering 500 template: {e}")
+            return {'error': 'Internal server error', 'details': str(error)}, 500
     
     @app.errorhandler(403)
     def forbidden(error):
         try:
             return render_template('403.html'), 403
-        except:
+        except Exception as e:
+            logger.error(f"Error rendering 403 template: {e}")
             return {'error': 'Forbidden'}, 403
     
     @app.errorhandler(405)
@@ -78,6 +83,15 @@ def register_middleware(app: Flask, db_available: bool):
         if request.method == 'HEAD':
             return '', 200
         return {'error': 'Method not allowed'}, 405
+    
+    @app.errorhandler(Exception)
+    def handle_exception(error):
+        """Catch-all for unhandled exceptions"""
+        logger.error(f"Unhandled exception: {error}", exc_info=True)
+        try:
+            return render_template('500.html'), 500
+        except:
+            return {'error': 'Internal server error'}, 500
 
 
 def configure_session(app: Flask):
