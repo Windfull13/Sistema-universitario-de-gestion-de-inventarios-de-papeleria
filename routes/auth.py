@@ -51,7 +51,7 @@ def _validate_registration(username=None, email=None, password=None, password_co
 def login():
     """Login admin con rate limiting, detección de IP y 2FA"""
     if g.user:
-        return redirect(url_for('index'))
+        return redirect(url_for('public.index'))
 
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -91,7 +91,7 @@ def login():
         logger.info(f"Successful login for {username} from {client_ip}")
         flash('Sesión iniciada correctamente', 'success')
         
-        return redirect(request.args.get('next', url_for('index')))
+        return redirect(request.args.get('next', url_for('public.index')))
     
     return render_template('login.html')
 
@@ -99,7 +99,7 @@ def login():
 def register():
     """Registro de administrador"""
     if g.user:
-        return redirect(url_for('index'))
+        return redirect(url_for('public.index'))
     
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
@@ -129,7 +129,7 @@ def register():
             _create_session_for_user(new_user, client_ip, user_agent)
             
             flash('Cuenta creada exitosamente', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for('public.index'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
@@ -140,7 +140,7 @@ def register():
 def student_login():
     """Login para estudiantes"""
     if g.user:
-        return redirect(url_for('index'))
+        return redirect(url_for('public.index'))
     
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -171,7 +171,7 @@ def student_login():
         logger.info(f"Student login: {email} from {client_ip}")
         flash('Sesión iniciada correctamente', 'success')
         
-        return redirect(request.args.get('next', url_for('index')))
+        return redirect(request.args.get('next', url_for('public.index')))
     
     return render_template('student_login.html')
 
@@ -179,7 +179,7 @@ def student_login():
 def register_student():
     """Registro de estudiante"""
     if g.user:
-        return redirect(url_for('index'))
+        return redirect(url_for('public.index'))
     
     if request.method == 'POST':
         email = request.form.get('email', '').strip()
@@ -212,7 +212,7 @@ def register_student():
             _create_session_for_user(new_user, client_ip, user_agent)
             
             flash('Cuenta creada exitosamente', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for('public.index'))
         except Exception as e:
             db.session.rollback()
             flash(f'Error: {str(e)}', 'danger')
@@ -225,7 +225,7 @@ def logout():
     """Cerrar sesión"""
     session.clear()
     flash('Sesión cerrada', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('public.index'))
 
 @auth_bp.route('/setup-2fa', methods=['GET', 'POST'])
 def setup_2fa():
@@ -256,7 +256,7 @@ def setup_2fa():
             session.pop('2fa_temp_secret', None)
             
             flash('2FA habilitado correctamente', 'success')
-            return redirect(url_for('index'))
+            return redirect(url_for('public.index'))
         
         elif action == 'disable':
             password = request.form.get('password', '').strip()
@@ -268,6 +268,6 @@ def setup_2fa():
             g.user.two_fa_secret = None
             db.session.commit()
             flash('2FA deshabilitado', 'info')
-            return redirect(url_for('index'))
+            return redirect(url_for('public.index'))
     
     return render_template('setup_2fa.html', step=1)
