@@ -50,7 +50,7 @@ Aplicación web Flask completa con panel administrativo avanzado, autenticación
 
 ## 🚀 Inicio Rápido
 
-**Para una guía detallada, ver [GETTING_STARTED.md](GETTING_STARTED.md)**
+Ver [QUICKSTART.md](QUICKSTART.md) para guía detallada.
 
 ```bash
 # 1. Instalar dependencias
@@ -64,38 +64,52 @@ Accede a: `http://localhost:5000`
 
 ### Credenciales de Prueba
 - **Admin**: usuario `admin` / contraseña `admin123`
-- **Estudiante**: email `student@example.com` / contraseña `student123`
+- **Estudiante**: usuario `juan.perez` / contraseña `student123`
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📁 Estructura del Proyecto (Modularizada v2.0)
 
 ```
-Proyecto_programación_web/
-├── app.py               # Aplicación Flask principal
-├── config.py           # Configuración
-├── models.py           # Modelos SQLAlchemy
-├── inventory.db        # Base de datos SQLite
+Proyecto_inventarios/
+├── app.py                 # Application factory (limpio y modular)
+├── models.py              # Modelos SQLAlchemy
+├── config.py              # Configuración por entorno
 │
-├── routes/             # Rutas Flask
-│   ├── auth.py        # Autenticación
-│   ├── admin.py       # Panel admin
-│   ├── student.py     # Panel estudiante
-│   ├── api.py         # API REST
-│   └── nfc.py         # Control NFC/QR
+├── core/                  # Componentes reutilizables
+│   ├── initialization.py  # DB setup, seeding automático
+│   ├── middleware.py      # Request handlers, error handlers
+│   ├── public_routes.py   # Rutas públicas (home, items, health)
+│   └── styles.py          # Colores y estilos centralizados
 │
-├── templates/          # 26 templates HTML
-├── static/             # CSS + uploads
-└── utils/              # Utilidades
+├── routes/                # Blueprints de aplicación
+│   ├── auth.py           # Autenticación
+│   ├── admin.py          # Panel admin
+│   ├── student.py        # Panel estudiante
+│   ├── api.py            # API REST
+│   └── nfc.py            # Control NFC/QR
+│
+├── templates/             # 26 templates HTML
+├── static/                # CSS + uploads
+├── utils/                 # Seguridad, analytics
+├── seed_products.py       # Datos iniciales
+└── requirements.txt       # Dependencias
 ```
+
+### Cambios v2.0
+✅ **Modularización**: Separación de concerns en `core/`
+✅ **Eliminados**: 10+ scripts de configuración antigua
+✅ **Centralizado**: Colores, estilos, configuración
+✅ **Documentación**: Solo 3 archivos esenciales (README, QUICKSTART, DEPLOYMENT)
+✅ **Seeding automático**: Integrado en initialization.py
 
 ---
 
 ## 📚 Documentación
 
 - **[README.md](README.md)** - Este archivo (descripción general)
-- **[GETTING_STARTED.md](GETTING_STARTED.md)** - Guía de inicio rápido
-- **[DESIGN_SYSTEM.md](DESIGN_SYSTEM.md)** - Sistema de diseño y componentes
+- **[QUICKSTART.md](QUICKSTART.md)** - Guía de inicio rápido
+- **[DEPLOYMENT_RENDER.md](DEPLOYMENT_RENDER.md)** - Despliegue en Render
 
 ---
 
@@ -118,25 +132,8 @@ Proyecto_programación_web/
 | **Productos** | 200+ |
 | **Categorías** | 12 |
 | **Precios** | $800 - $10,000 COP |
-| **Rentales activos** | Variable |
-
----
-
-## 🆘 Solución Rápida de Problemas
-
-**Puerto ocupado:**
-```bash
-# Cambiar puerto en app.py
-app.run(port=5001)
-```
-
-**Base de datos corrupta:**
-```bash
-rm inventory.db
-python app.py  # Se recrea automáticamente
-```
-
-**Más ayuda:** Ver [GETTING_STARTED.md](GETTING_STARTED.md#-solucionar-problemas)
+| **Templates** | 26 |
+| **Líneas de código** | ~2,500 (optimizado) |
 
 ---
 
@@ -163,6 +160,7 @@ python app.py  # Se recrea automáticamente
 - SQLAlchemy 2.0+
 - Flask-Limiter
 - pyotp (2FA)
+- Pillow (generación de imágenes)
 
 Ver `requirements.txt` para lista completa.
 
@@ -172,15 +170,14 @@ Ver `requirements.txt` para lista completa.
 
 - Aplicación lista para producción
 - Interfaz 100% responsiva
-- 1,200+ líneas de CSS personalizado
-- 26 templates HTML profesionales
-- Completa en Español
+- Arquitectura modular y mantenible
+- Todos los datos de prueba se generan automáticamente
+- Sistema resistente a fallos de base de datos
 
 ---
 
-**Última actualización**: 24 de noviembre de 2025  
-**Versión**: 2.0  
+**Última actualización**: Diciembre 2025  
+**Versión**: 2.0 (Modularizada)  
 **Estado**: ✅ Producción (100% Funcional)  
-**Pruebas**: ✅ 5/5 Pasadas  
 
 Desarrollado con ❤️ para Papelería Universitaria
