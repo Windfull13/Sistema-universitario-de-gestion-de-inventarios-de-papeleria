@@ -65,18 +65,31 @@ def item_detail(item_id):
     """Public item detail page"""
     from flask import current_app
     
-    try:
-        db_available = getattr(current_app, 'db_available', False)
-        
-        if not db_available:
+    db_available = getattr(current_app, 'db_available', False)
+    
+    if not db_available:
+        try:
             return render_template('404.html'), 404
-        
+        except:
+            return {'error': 'Database not available'}, 503
+    
+    try:
         from models import Item
-        item = Item.query.get_or_404(item_id)
+        item = Item.query.get(item_id)
+        
+        if not item:
+            try:
+                return render_template('404.html'), 404
+            except:
+                return {'error': 'Item not found'}, 404
+        
         return render_template('item.html', item=item)
     except Exception as e:
-        logger.error(f"Error in item_detail: {e}")
-        return render_template('404.html'), 404
+        logger.error(f"Error in item_detail: {e}", exc_info=True)
+        try:
+            return render_template('404.html'), 404
+        except:
+            return {'error': f'Error: {str(e)}'}, 500
 
 
 @public_bp.route('/api/item/<int:item_id>/image')
