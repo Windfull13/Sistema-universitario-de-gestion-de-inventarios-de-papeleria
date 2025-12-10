@@ -15,7 +15,7 @@ def student_required(f):
     def decorated_function(*args, **kwargs):
         if not g.user or g.user.role != 'student':
             flash('Acceso denegado', 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('auth.student_login'))
         return f(*args, **kwargs)
     return decorated_function
 

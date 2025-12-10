@@ -19,7 +19,7 @@ def admin_required(f):
         from flask import g
         if not g.user or g.user.role != 'admin':
             flash('Acceso denegado', 'danger')
-            return redirect(url_for('index'))
+            return redirect(url_for('auth.login'))
         return f(*args, **kwargs)
     return decorated_function
 
