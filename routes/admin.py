@@ -370,8 +370,10 @@ def admin_rental_extensions():
     except Exception as e:
         logger.error(f"Error en admin_rental_extensions: {str(e)}", exc_info=True)
         flash(f'Error cargando extensiones: {str(e)}', 'danger')
+        # Retornar paginación vacía
+        empty_query = db.session.query(Transaction).filter(Transaction.id == -1).paginate(page=1, per_page=20)
         return render_template('admin_rental_extensions.html',
-                             pending_extensions=None,
+                             pending_extensions=empty_query,
                              approved_extensions=[],
                              today=date.today())
 
