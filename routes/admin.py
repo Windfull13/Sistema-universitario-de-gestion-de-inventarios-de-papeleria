@@ -340,6 +340,51 @@ def admin_security_log():
     
     return render_template('admin_security_log.html', logs=logs)
 
+@admin_bp.route('/student-rentals')
+@admin_required
+def admin_student_rentals():
+    """Ver rentas activas de estudiantes"""
+    from datetime import date
+    
+    page = request.args.get('page', 1, type=int)
+    filter_type = request.args.get('filter', 'all')  # all, active, overdue, returned
+    
+    try:
+        query = db.session.query(Transaction).filter(
+            Transaction.kind == 'rent',
+            Transaction.user_id.isnot(None)  # Solo transacciones con usuario
+        )
+        
+        if filter_type == 'active':
+            query = query.filter(
+                Transaction.returned == False,
+                Transaction.rent_due_date >= date.today()
+            )
+        elif filter_type == 'overdue':
+            query = query.filter(
+                Transaction.returned == False,
+                Transaction.rent_due_date < date.today()
+            )
+        elif filter_type == 'returned':
+            query = query.filter(Transaction.returned == True)
+        # else: 'all' - sin filtro adicional
+        
+        pagination = query.order_by(desc(Transaction.timestamp)).paginate(page=page, per_page=30)
+        
+        return render_template('admin_student_rentals.html',
+                             rentals=pagination.items,
+                             pagination=pagination,
+                             filter_type=filter_type,
+                             today=date.today())
+    except Exception as e:
+        logger.error(f"Error en admin_student_rentals: {str(e)}", exc_info=True)
+        flash(f'Error cargando rentas de estudiantes: {str(e)}', 'danger')
+        return render_template('admin_student_rentals.html',
+                             rentals=[],
+                             pagination=None,
+                             filter_type=filter_type,
+                             today=date.today())
+
 @admin_bp.route('/rental-extensions')
 @admin_required
 def admin_rental_extensions():

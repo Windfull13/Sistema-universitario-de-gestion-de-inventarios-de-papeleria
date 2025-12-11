@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rentas de Estudiantes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+      body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px 0; }
+      .navbar { background: rgba(255,255,255,0.95); box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+      .card { border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+      .badge-active { background: #d4edda; color: #155724; }
+      .badge-overdue { background: #f8d7da; color: #721c24; }
+      .badge-returned { background: #e2e3e5; color: #383d41; }
+      .table-hover tbody tr:hover { background-color: #f8f9fa; }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-light mb-4">
+      <div class="container-fluid px-4">
+        <a class="navbar-brand fw-bold" href="/admin">
+          <i class="bi bi-graph-up me-2"></i>Panel Admin
+        </a>
+        <div class="ms-auto d-flex gap-2 align-items-center">
+          {% if current_user %}
+            <span class="text-muted">{{ current_user.username }}</span>
+            <a class="btn btn-sm btn-outline-secondary" href="/logout">Cerrar sesión</a>
+          {% endif %}
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2><i class="bi bi-clock-history me-2"></i>Rentas de Estudiantes</h2>
+          <p class="text-muted">Gestión y seguimiento de rentas activas</p>
+        </div>
+        <a href="/admin" class="btn btn-outline-primary">← Volver al panel</a>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          {% for category, msg in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              {{ msg }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+          {% endfor %}
+        {% endif %}
+      {% endwith %}
+
+      <!-- Filtros -->
+      <div class="card mb-4">
+        <div class="card-body">
+          <h6 class="card-title">Filtrar por estado</h6>
+          <div class="btn-group" role="group">
+            <a href="?filter=all" class="btn btn-outline-primary {% if filter_type == 'all' %}active{% endif %}">
+              <i class="bi bi-funnel me-1"></i> Todas
+            </a>
+            <a href="?filter=active" class="btn btn-outline-success {% if filter_type == 'active' %}active{% endif %}">
+              <i class="bi bi-check-circle me-1"></i> Activas
+            </a>
+            <a href="?filter=overdue" class="btn btn-outline-danger {% if filter_type == 'overdue' %}active{% endif %}">
+              <i class="bi bi-exclamation-triangle me-1"></i> Vencidas
+            </a>
+            <a href="?filter=returned" class="btn btn-outline-secondary {% if filter_type == 'returned' %}active{% endif %}">
+              <i class="bi bi-check-all me-1"></i> Devueltas
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de rentas -->
+      <div class="card">
+        {% if rentals %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead class="table-light">
+                <tr>
+                  <th style="width: 120px;">Estudiante</th>
+                  <th style="width: 150px;">Producto</th>
+                  <th style="width: 100px;">Fecha Inicio</th>
+                  <th style="width: 100px;">Vencimiento</th>
+                  <th style="width: 80px;">Estado</th>
+                  <th style="width: 100px;">Días</th>
+                  <th style="width: 100px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for rental in rentals %}
+                  <tr>
+                    <td>
+                      <strong>{{ rental.user_obj.username if rental.user_obj else 'N/A' }}</strong>
+                      <br>
+                      <small class="text-muted">{{ rental.user_obj.email if rental.user_obj else '' }}</small>
+                    </td>
+                    <td>
+                      <strong>{{ rental.item.name if rental.item else 'N/A' }}</strong>
+                      <br>
+                      <small>Cantidad: {{ rental.qty }}</small>
+                    </td>
+                    <td>
+                      <small>{{ rental.rent_start_date.strftime('%d/%m/%Y') if rental.rent_start_date else 'N/A' }}</small>
+                    </td>
+                    <td>
+                      <small>
+                        {% if rental.rent_due_date %}
+                          <strong>{{ rental.rent_due_date.strftime('%d/%m/%Y') }}</strong>
+                        {% else %}
+                          N/A
+                        {% endif %}
+                      </small>
+                    </td>
+                    <td>
+                      {% if rental.returned %}
+                        <span class="badge badge-returned">Devuelto</span>
+                      {% elif rental.rent_due_date and rental.rent_due_date < today %}
+                        <span class="badge badge-overdue">Vencido</span>
+                      {% else %}
+                        <span class="badge badge-active">Activo</span>
+                      {% endif %}
+                    </td>
+                    <td>
+                      {% if rental.rent_due_date %}
+                        {% set dias = (rental.rent_due_date - today).days %}
+                        {% if dias < 0 %}
+                          <span class="text-danger"><strong>{{ dias }} días</strong></span>
+                        {% elif dias <= 3 %}
+                          <span class="text-warning"><strong>{{ dias }} días</strong></span>
+                        {% else %}
+                          <span class="text-success"><strong>{{ dias }} días</strong></span>
+                        {% endif %}
+                      {% else %}
+                        N/A
+                      {% endif %}
+                    </td>
+                    <td>
+                      <div class="btn-group btn-group-sm" role="group">
+                        <a href="/admin/items/{{ rental.item.id }}/edit" class="btn btn-outline-info" title="Ver producto">
+                          <i class="bi bi-box"></i>
+                        </a>
+                        {% if not rental.returned %}
+                          <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#modal{{ rental.id }}" title="Marcar como devuelto">
+                            <i class="bi bi-check-lg"></i>
+                          </button>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+
+                  <!-- Modal para marcar como devuelto -->
+                  {% if not rental.returned %}
+                    <div class="modal fade" id="modal{{ rental.id }}" tabindex="-1">
+                      <div class="modal-dialog modal-sm">
+                        <div class="modal-content">
+                          <div class="modal-header">
+                            <h5 class="modal-title">Confirmar devolución</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                          </div>
+                          <div class="modal-body">
+                            <p><strong>{{ rental.user_obj.username }}</strong> está devolviendo:</p>
+                            <p><em>{{ rental.item.name }}</em></p>
+                            <p>¿Confirmar devolución?</p>
+                          </div>
+                          <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <form method="POST" action="/student/rentals/{{ rental.id }}/return" style="display: inline;">
+                              <button type="submit" class="btn btn-success">Confirmar devolución</button>
+                            </form>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paginación -->
+          {% if pagination and pagination.pages > 1 %}
+            <nav class="card-footer" aria-label="Paginación">
+              <ul class="pagination justify-content-center mb-0">
+                {% if pagination.has_prev %}
+                  <li class="page-item">
+                    <a class="page-link" href="?filter={{ filter_type }}&page=1">Primera</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?filter={{ filter_type }}&page={{ pagination.prev_num }}">Anterior</a>
+                  </li>
+                {% endif %}
+
+                {% for page_num in pagination.iter_pages() %}
+                  {% if page_num %}
+                    {% if page_num == pagination.page %}
+                      <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                      </li>
+                    {% else %}
+                      <li class="page-item">
+                        <a class="page-link" href="?filter={{ filter_type }}&page={{ page_num }}">{{ page_num }}</a>
+                      </li>
+                    {% endif %}
+                  {% endif %}
+                {% endfor %}
+
+                {% if pagination.has_next %}
+                  <li class="page-item">
+                    <a class="page-link" href="?filter={{ filter_type }}&page={{ pagination.next_num }}">Siguiente</a>
+                  </li>
+                  <li class="page-item">
+                    <a class="page-link" href="?filter={{ filter_type }}&page={{ pagination.pages }}">Última</a>
+                  </li>
+                {% endif %}
+              </ul>
+            </nav>
+          {% endif %}
+        {% else %}
+          <div class="card-body">
+            <div class="alert alert-info mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+              No hay rentas de estudiantes en esta categoría.
+            </div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Estadísticas rápidas -->
+      <div class="row mt-4">
+        <div class="col-md-3 mb-3">
+          <div class="card text-center">
+            <div class="card-body">
+              <h6 class="card-title text-muted">Total de Rentas</h6>
+              <h3 class="text-primary">{{ pagination.total if pagination else 0 }}</h3>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
