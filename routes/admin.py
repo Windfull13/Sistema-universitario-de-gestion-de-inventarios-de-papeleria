@@ -344,43 +344,54 @@ def admin_security_log():
 @admin_required
 def admin_rental_extensions():
     """Gestionar solicitudes de extensión de alquiler"""
-    from datetime import datetime
+    from datetime import datetime, date
     
     page = request.args.get('page', 1, type=int)
     
-    # Rentals pendientes de extensión (vencidas)
+    # Rentals pendientes de extensión (vencidas pero no devueltas)
     pending_extensions = db.session.query(Transaction).filter(
         Transaction.kind == 'rent',
-        Transaction.rent_due_date < datetime.utcnow(),
+        Transaction.rent_due_date < date.today(),
         Transaction.returned == False
     ).order_by(desc(Transaction.rent_due_date)).paginate(page=page, per_page=20)
     
-    # Rentals con extensiones aprobadas
+    # Rentals con extensiones aprobadas (no devueltas aún)
     approved_extensions = db.session.query(Transaction).filter(
         Transaction.kind == 'rent',
+        Transaction.extension_approved == True,
         Transaction.returned == False
-    ).order_by(desc(Transaction.rent_due_date)).limit(10).all()
+    ).order_by(desc(Transaction.rent_due_date)).all()
     
     return render_template('admin_rental_extensions.html', 
                          pending_extensions=pending_extensions,
                          approved_extensions=approved_extensions,
-                         pagination=pending_extensions,
                          now=datetime.utcnow())
 
 @admin_bp.route('/rental-extensions/<int:transaction_id>/extend', methods=['POST'])
 @admin_required
 def extend_rental(transaction_id):
     """Extender período de alquiler"""
+    from datetime import date, timedelta as td
+    
     transaction = Transaction.query.get_or_404(transaction_id)
     days = request.form.get('days', 7, type=int)
     
     try:
-        transaction.return_date = transaction.return_date + timedelta(days=days)
+        # Extender la fecha de devolución esperada
+        if transaction.rent_due_date:
+            transaction.rent_due_date = transaction.rent_due_date + td(days=days)
+        
+        # Marcar extensión como aprobada
+        transaction.extension_approved = True
+        transaction.extension_days = days
+        transaction.extension_approved_at = datetime.utcnow()
+        
         db.session.commit()
-        logger.info(f"Rental extended: {transaction.id}")
+        logger.info(f"Rental extended: {transaction.id}, {days} days")
         flash(f'Alquiler extendido {days} días', 'success')
     except Exception as e:
         db.session.rollback()
+        logger.error(f"Error extending rental {transaction_id}: {str(e)}")
         flash(f'Error: {str(e)}', 'danger')
     
     return redirect(url_for('admin.admin_rental_extensions'))

@@ -331,3 +331,111 @@ def api_nfc_stats():
         'restocks': restocks,
         'success_rate': 100.0  # En producción, mejorar con trazabilidad
     })
+
+@api_bp.route('/buy', methods=['POST'])
+def api_buy():
+    """Comprar un producto (solo estudiantes)"""
+    from flask import g, redirect, url_for, flash
+    
+    # Verificar que el usuario está autenticado y es estudiante
+    if not g.user or g.user.role != 'student':
+        return redirect(url_for('auth.login'))
+    
+    try:
+        item_id = request.form.get('item_id', type=int)
+        quantity = request.form.get('quantity', 1, type=int)
+        
+        if not item_id or quantity <= 0:
+            flash('Datos inválidos', 'danger')
+            return redirect(request.referrer or url_for('public.index'))
+        
+        item = Item.query.get_or_404(item_id)
+        
+        if item.stock < quantity:
+            flash('No hay suficiente stock disponible', 'warning')
+            return redirect(request.referrer or url_for('public.index'))
+        
+        # Crear transacción de compra
+        transaction = Transaction(
+            user_id=g.user.id,
+            item_id=item.id,
+            kind='buy',
+            qty=quantity,
+            timestamp=datetime.utcnow()
+        )
+        
+        # Reducir stock
+        item.stock -= quantity
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        logger.info(f"Purchase: user={g.user.id}, item={item.id}, qty={quantity}")
+        flash(f'Compra realizada: {quantity}x {item.name}', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error en compra: {str(e)}", exc_info=True)
+        flash(f'Error en la compra: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('public.index'))
+
+@api_bp.route('/rent', methods=['POST'])
+def api_rent():
+    """Rentar un producto (solo estudiantes)"""
+    from flask import g, redirect, url_for, flash
+    from datetime import date
+    
+    # Verificar que el usuario está autenticado y es estudiante
+    if not g.user or g.user.role != 'student':
+        return redirect(url_for('auth.login'))
+    
+    try:
+        item_id = request.form.get('item_id', type=int)
+        days = request.form.get('days', 7, type=int)
+        
+        if not item_id or days <= 0 or days > 30:
+            flash('Datos inválidos. Los días deben estar entre 1 y 30', 'danger')
+            return redirect(request.referrer or url_for('public.index'))
+        
+        item = Item.query.get_or_404(item_id)
+        
+        if not item.rentable:
+            flash('Este producto no es rentable', 'warning')
+            return redirect(request.referrer or url_for('public.index'))
+        
+        if item.stock < 1:
+            flash('No hay stock disponible para rentar', 'warning')
+            return redirect(request.referrer or url_for('public.index'))
+        
+        # Crear transacción de renta
+        today = date.today()
+        due_date = today + timedelta(days=days)
+        
+        transaction = Transaction(
+            user_id=g.user.id,
+            item_id=item.id,
+            kind='rent',
+            qty=1,
+            rent_days=days,
+            timestamp=datetime.utcnow(),
+            rent_start_date=today,
+            rent_due_date=due_date,
+            returned=False
+        )
+        
+        # Reducir stock
+        item.stock -= 1
+        
+        db.session.add(transaction)
+        db.session.commit()
+        
+        logger.info(f"Rental: user={g.user.id}, item={item.id}, days={days}")
+        flash(f'Renta creada: {item.name} por {days} días (Vencimiento: {due_date.strftime("%d/%m/%Y")})', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        logger.error(f"Error en renta: {str(e)}", exc_info=True)
+        flash(f'Error en la renta: {str(e)}', 'danger')
+    
+    return redirect(request.referrer or url_for('public.index'))

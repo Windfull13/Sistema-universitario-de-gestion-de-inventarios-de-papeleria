@@ -48,136 +48,208 @@ Aplicación web Flask completa con panel administrativo avanzado, autenticación
 
 ---
 
-## 🚀 Inicio Rápido
+## 🚀 Características Técnicas
 
-Ver [QUICKSTART.md](QUICKSTART.md) para guía detallada.
+### Backend (Python/Flask)
+- Arquitectura modular con blueprints
+- SQLAlchemy ORM para persistencia
+- Middleware de seguridad
+- Análisis predictivo con ML
+- Sistema de logging estructurado
+- Gestión de sesiones seguras
 
+### Frontend (HTML/CSS/Bootstrap)
+- Bootstrap 5.3 para UI responsiva
+- CSS personalizado con gradientes
+- Animaciones suaves
+- Formularios validados
+- Mensajes de notificación
+
+### Base de Datos
+- SQLite para desarrollo
+- PostgreSQL para producción
+- Migraciones automáticas
+- Índices optimizados
+
+---
+
+## 📋 Requisitos
+
+```
+Python 3.8+
+Flask 2.2+
+SQLAlchemy 3.0+
+PostgreSQL (producción)
+```
+
+Ver `requirements.txt` para la lista completa.
+
+---
+
+## ⚙️ Instalación
+
+### 1. Clonar Repositorio
 ```bash
-# 1. Instalar dependencias
-pip install -r requirements.txt
+git clone https://github.com/Windfull13/Sistema-universitario-de-gestion-de-inventarios-de-papeleria.git
+cd Sistema-universitario-de-gestion-de-inventarios-de-papeleria
+```
 
-# 2. Ejecutar aplicación
+### 2. Crear Entorno Virtual
+```bash
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+```
+
+### 3. Instalar Dependencias
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Configurar Variables de Entorno
+```bash
+cp .env.example .env
+# Editar .env con tus configuraciones
+```
+
+### 5. Inicializar Base de Datos
+```bash
 python app.py
 ```
 
-Accede a: `http://localhost:5000`
+---
 
-### Credenciales de Prueba
-- **Admin**: usuario `admin` / contraseña `admin123`
-- **Estudiante**: usuario `juan.perez` / contraseña `student123`
+## 🔑 Usuarios Por Defecto
+
+### Admin
+- **Usuario:** admin
+- **Contraseña:** admin123
+- **URL:** http://localhost:5000/admin
+
+### Estudiante
+- **Email:** student@example.com
+- **Contraseña:** student123
+- **URL:** http://localhost:5000/student
 
 ---
 
-## 📁 Estructura del Proyecto (Modularizada v2.0)
+## 🎯 Funcionalidades Principales
+
+### Para Estudiantes
+- ✅ Ver catálogo de productos
+- ✅ Comprar productos
+- ✅ Rentar productos (si disponibles)
+- ✅ Solicitar extensiones de renta
+- ✅ Ver historial de transacciones
+- ✅ Estadísticas personales
+- ✅ Gestión de cuenta
+
+### Para Administradores
+- ✅ Dashboard con análisis
+- ✅ Gestión completa de inventario
+- ✅ Aprobar/Rechazar extensiones
+- ✅ Análisis de demanda estacional
+- ✅ Inteligencia de proveedores
+- ✅ Predictiva de faltantes
+- ✅ Registro de seguridad (auditoría)
+- ✅ Gestión de API keys
+
+---
+
+## 🔐 Seguridad
+
+- ✅ Autenticación robusta
+- ✅ Cifrado de contraseñas (Argon2)
+- ✅ Protección CSRF
+- ✅ Rate limiting
+- ✅ Validación de entrada
+- ✅ Registro de auditoría completo
+- ✅ Autenticación de dos factores (2FA)
+- ✅ Gestión de sesiones activas
+
+---
+
+## 📊 Base de Datos
+
+### Modelos Principales
+- **User** - Usuarios (Admin, Estudiantes)
+- **Item** - Productos del catálogo
+- **Transaction** - Compras, rentas y devoluciones
+- **ActiveSession** - Sesiones activas para seguridad
+- **LoginAttempt** - Registro de intentos de login
+- **ApiKey** - Claves para API externa
+
+---
+
+## 🚀 Despliegue
+
+### Render.com
+1. Conectar repositorio GitHub
+2. Configurar variables de entorno
+3. Establecer comando de inicio: `gunicorn -c gunicorn_config.py app:app`
+4. Deploy automático en cada push
+
+### Heroku (Alternativa)
+1. Instalar Heroku CLI
+2. Ejecutar: `heroku create`
+3. Agregar base de datos PostgreSQL
+4. Hacer push: `git push heroku master`
+
+---
+
+## 📝 Estructura del Proyecto
 
 ```
-Proyecto_inventarios/
-├── app.py                 # Application factory (limpio y modular)
-├── models.py              # Modelos SQLAlchemy
-├── config.py              # Configuración por entorno
-│
-├── core/                  # Componentes reutilizables
-│   ├── initialization.py  # DB setup, seeding automático
-│   ├── middleware.py      # Request handlers, error handlers
-│   ├── public_routes.py   # Rutas públicas (home, items, health)
-│   └── styles.py          # Colores y estilos centralizados
-│
-├── routes/                # Blueprints de aplicación
-│   ├── auth.py           # Autenticación
-│   ├── admin.py          # Panel admin
-│   ├── student.py        # Panel estudiante
-│   ├── api.py            # API REST
-│   └── nfc.py            # Control NFC/QR
-│
-├── templates/             # 26 templates HTML
-├── static/                # CSS + uploads
-├── utils/                 # Seguridad, analytics
-├── seed_products.py       # Datos iniciales
-└── requirements.txt       # Dependencias
+project/
+├── app.py                 # Aplicación principal
+├── config.py              # Configuración
+├── models.py              # Modelos ORM
+├── requirements.txt       # Dependencias
+├── Procfile               # Configuración Heroku/Render
+├── runtime.txt            # Versión Python
+├── gunicorn_config.py     # Config web server
+├── core/
+│   ├── initialization.py  # Setup inicial
+│   ├── middleware.py      # Middleware de seguridad
+│   ├── public_routes.py   # Rutas públicas
+│   └── styles.py          # Estilos dinámicos
+├── routes/
+│   ├── admin.py           # Rutas de admin
+│   ├── auth.py            # Autenticación
+│   ├── student.py         # Rutas de estudiante
+│   ├── api.py             # API REST
+│   └── nfc.py             # NFC/QR
+├── templates/             # Templates HTML
+├── static/                # CSS, JS, imágenes
+└── utils/
+    ├── analytics.py       # Análisis y ML
+    └── security.py        # Utilidades de seguridad
 ```
 
-### Cambios v2.0
-✅ **Modularización**: Separación de concerns en `core/`
-✅ **Eliminados**: 10+ scripts de configuración antigua
-✅ **Centralizado**: Colores, estilos, configuración
-✅ **Documentación**: Solo 3 archivos esenciales (README, QUICKSTART, DEPLOYMENT)
-✅ **Seeding automático**: Integrado en initialization.py
+---
+
+## 🐛 Troubleshooting
+
+### Error 500 en extensiones
+- ✅ Arreglado: Se corrigió la comparación de tipos Date/DateTime
+
+### Error 404 en compra
+- ✅ Arreglado: Se agregaron rutas `/api/buy` y `/api/rent`
+
+### Base de datos vacía
+- Ejecutar: `python app.py` para seed automático
 
 ---
 
-## 📚 Documentación
+## 📞 Soporte
 
-- **[README.md](README.md)** - Este archivo (descripción general)
-- **[QUICKSTART.md](QUICKSTART.md)** - Guía de inicio rápido
-- **[DEPLOYMENT_RENDER.md](DEPLOYMENT_RENDER.md)** - Despliegue en Render
+Para reportar bugs o sugerir mejoras, abre un issue en GitHub.
 
 ---
 
-## 🔒 Características de Seguridad
+## 📄 Licencia
 
-✅ Tokens de sesión con validación de IP
-✅ Timeout automático (8 horas inactividad)
-✅ 2FA opcional (TOTP/Authenticator)
-✅ Contraseñas hasheadas (PBKDF2)
-✅ CSRF protection
-✅ Rate limiting
-✅ Registro de auditoría
+Proyecto educativo de Sistema de Gestión de Inventarios para Papelería Universitaria.
 
 ---
 
-## 📊 Estadísticas Actuales
-
-| Métrica | Valor |
-|---------|-------|
-| **Productos** | 200+ |
-| **Categorías** | 12 |
-| **Precios** | $800 - $10,000 COP |
-| **Templates** | 26 |
-| **Líneas de código** | ~2,500 (optimizado) |
-
----
-
-## 🔗 Rutas Principales
-
-| Ruta | Descripción |
-|------|-------------|
-| `/` | Página de inicio |
-| `/login` | Login administrador |
-| `/student/login` | Login estudiante |
-| `/admin/` | Dashboard administrativo |
-| `/student/dashboard` | Dashboard estudiante |
-
----
-
-## 📦 Requisitos
-
-- Python 3.8+
-- pip (gestor de paquetes)
-- Navegador moderno (Chrome, Firefox, Safari, Edge)
-
-**Dependencias principales:**
-- Flask 2.3+
-- SQLAlchemy 2.0+
-- Flask-Limiter
-- pyotp (2FA)
-- Pillow (generación de imágenes)
-
-Ver `requirements.txt` para lista completa.
-
----
-
-## 📝 Notas
-
-- Aplicación lista para producción
-- Interfaz 100% responsiva
-- Arquitectura modular y mantenible
-- Todos los datos de prueba se generan automáticamente
-- Sistema resistente a fallos de base de datos
-
----
-
-**Última actualización**: Diciembre 2025  
-**Versión**: 2.0 (Modularizada)  
-**Estado**: ✅ Producción (100% Funcional)  
-
-Desarrollado con ❤️ para Papelería Universitaria
+**Último actualizado:** Diciembre 2025
