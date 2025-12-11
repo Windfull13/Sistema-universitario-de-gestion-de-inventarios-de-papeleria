@@ -73,9 +73,9 @@
                   {% for rental in pending_extensions.items %}
                     <tr class="table-danger">
                       <td>
-                        <strong>{{ rental.user.email if rental.user else 'N/A' }}</strong>
+                        <strong>{{ rental.user_obj.email if rental.user_obj else 'N/A' }}</strong>
                         <br>
-                        <small class="text-muted">{{ rental.user.username if rental.user else '' }}</small>
+                        <small class="text-muted">{{ rental.user_obj.username if rental.user_obj else '' }}</small>
                       </td>
                       <td>
                         <strong>{{ rental.item.name if rental.item else 'N/A' }}</strong>
@@ -87,7 +87,7 @@
                       </td>
                       <td>
                         {% if rental.rent_due_date %}
-                          <strong>{{ (now.date() - rental.rent_due_date).days }} días</strong>
+                          <strong>{{ (today - rental.rent_due_date).days }} días</strong>
                         {% else %}
                           N/A
                         {% endif %}
@@ -191,7 +191,7 @@
                       </td>
                       <td>
                         {% if rental.rent_due_date %}
-                          {% set dias_restantes = (rental.rent_due_date - now.date()).days %}
+                          {% set dias_restantes = (rental.rent_due_date - today).days %}
                           {% if dias_restantes < 0 %}
                             <span class="badge bg-danger">{{ dias_restantes }} días (VENCIDO)</span>
                           {% elif dias_restantes <= 3 %}
@@ -206,7 +206,7 @@
                       <td>
                         {% if rental.returned %}
                           <span class="badge bg-secondary">Devuelto</span>
-                        {% elif rental.rent_due_date and rental.rent_due_date < now.date() %}
+                        {% elif rental.rent_due_date and rental.rent_due_date < today %}
                           <span class="badge bg-danger">Vencido</span>
                         {% else %}
                           <span class="badge bg-info">Activo</span>

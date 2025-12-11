@@ -348,24 +348,32 @@ def admin_rental_extensions():
     
     page = request.args.get('page', 1, type=int)
     
-    # Rentals pendientes de extensión (vencidas pero no devueltas)
-    pending_extensions = db.session.query(Transaction).filter(
-        Transaction.kind == 'rent',
-        Transaction.rent_due_date < date.today(),
-        Transaction.returned == False
-    ).order_by(desc(Transaction.rent_due_date)).paginate(page=page, per_page=20)
-    
-    # Rentals con extensiones aprobadas (no devueltas aún)
-    approved_extensions = db.session.query(Transaction).filter(
-        Transaction.kind == 'rent',
-        Transaction.extension_approved == True,
-        Transaction.returned == False
-    ).order_by(desc(Transaction.rent_due_date)).all()
-    
-    return render_template('admin_rental_extensions.html', 
-                         pending_extensions=pending_extensions,
-                         approved_extensions=approved_extensions,
-                         now=datetime.utcnow())
+    try:
+        # Rentals pendientes de extensión (vencidas pero no devueltas)
+        pending_extensions = db.session.query(Transaction).filter(
+            Transaction.kind == 'rent',
+            Transaction.rent_due_date < date.today(),
+            Transaction.returned == False
+        ).order_by(desc(Transaction.rent_due_date)).paginate(page=page, per_page=20)
+        
+        # Rentals con extensiones aprobadas (no devueltas aún)
+        approved_extensions = db.session.query(Transaction).filter(
+            Transaction.kind == 'rent',
+            Transaction.extension_approved == True,
+            Transaction.returned == False
+        ).order_by(desc(Transaction.rent_due_date)).all()
+        
+        return render_template('admin_rental_extensions.html', 
+                             pending_extensions=pending_extensions,
+                             approved_extensions=approved_extensions,
+                             today=date.today())
+    except Exception as e:
+        logger.error(f"Error en admin_rental_extensions: {str(e)}", exc_info=True)
+        flash(f'Error cargando extensiones: {str(e)}', 'danger')
+        return render_template('admin_rental_extensions.html',
+                             pending_extensions=None,
+                             approved_extensions=[],
+                             today=date.today())
 
 @admin_bp.route('/rental-extensions/<int:transaction_id>/extend', methods=['POST'])
 @admin_required
