@@ -17,6 +17,30 @@ try:
 except ImportError:
     HAS_QR = False
 
+@nfc_bp.route('/qr/home')
+def qr_home():
+    """GET /nfc/qr/home - Generar código QR para página principal"""
+    
+    if not HAS_QR:
+        return jsonify({'error': 'QR library not installed'}), 500
+    
+    try:
+        # URL de la página principal
+        url = 'https://sistema-universitario-de-gestion-de.onrender.com/'
+        
+        # Generar QR con segno
+        qr = segno.make(url, error='L', micro=False)
+        
+        # Convertir a PNG
+        buf = BytesIO()
+        qr.save(buf, kind='png', scale=5)
+        buf.seek(0)
+        
+        return send_file(buf, mimetype='image/png')
+    except Exception as e:
+        logger.error(f"QR home generation error: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @nfc_bp.route('/qr/<int:item_id>')
 def qr_item(item_id):
     """GET /nfc/qr/<item_id> - Generar código QR para item (enlace)"""
