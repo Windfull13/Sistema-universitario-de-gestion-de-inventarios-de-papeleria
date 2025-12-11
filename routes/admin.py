@@ -344,16 +344,28 @@ def admin_security_log():
 @admin_required
 def admin_rental_extensions():
     """Gestionar solicitudes de extensión de alquiler"""
+    from datetime import datetime
+    
     page = request.args.get('page', 1, type=int)
     
-    # Búsqueda de rentals pendientes de extensión
-    overdue = db.session.query(Transaction).filter(
+    # Rentals pendientes de extensión (vencidas)
+    pending_extensions = db.session.query(Transaction).filter(
         Transaction.kind == 'rent',
-        Transaction.return_date < datetime.utcnow(),
+        Transaction.rent_due_date < datetime.utcnow(),
         Transaction.returned == False
-    ).paginate(page=page, per_page=20)
+    ).order_by(desc(Transaction.rent_due_date)).paginate(page=page, per_page=20)
     
-    return render_template('admin_rental_extensions.html', overdue=overdue)
+    # Rentals con extensiones aprobadas
+    approved_extensions = db.session.query(Transaction).filter(
+        Transaction.kind == 'rent',
+        Transaction.returned == False
+    ).order_by(desc(Transaction.rent_due_date)).limit(10).all()
+    
+    return render_template('admin_rental_extensions.html', 
+                         pending_extensions=pending_extensions,
+                         approved_extensions=approved_extensions,
+                         pagination=pending_extensions,
+                         now=datetime.utcnow())
 
 @admin_bp.route('/rental-extensions/<int:transaction_id>/extend', methods=['POST'])
 @admin_required

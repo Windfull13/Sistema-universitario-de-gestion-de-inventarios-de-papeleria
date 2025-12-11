@@ -53,51 +53,51 @@
       <div class="tab-content">
         <!-- Tab: Solicitudes Pendientes -->
         <div class="tab-pane fade show active" id="pending" role="tabpanel">
-          {% if pending_extensions %}
+          {% if pending_extensions.items %}
+            <div class="alert alert-warning mb-4">
+              <strong>⚠️ {{ pending_extensions.total }} alquiler(es) vencido(s)</strong> - Los estudiantes pueden solicitar extensión para devolver más tarde.
+            </div>
+            
             <div class="table-responsive">
               <table class="table table-hover">
                 <thead class="table-light">
                   <tr>
                     <th>Estudiante</th>
-                    <th>Item</th>
-                    <th>Vencimiento Actual</th>
-                    <th>Solicitud (días)</th>
-                    <th>Solicitado hace</th>
+                    <th>Item Alquilado</th>
+                    <th>Fecha de Vencimiento</th>
+                    <th>Días de Retraso</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for ext in pending_extensions %}
-                    <tr>
+                  {% for rental in pending_extensions.items %}
+                    <tr class="table-danger">
                       <td>
-                        <strong>{{ ext.user.email if ext.user else 'N/A' }}</strong>
+                        <strong>{{ rental.user.email if rental.user else 'N/A' }}</strong>
+                        <br>
+                        <small class="text-muted">{{ rental.user.username if rental.user else '' }}</small>
                       </td>
-                      <td>{{ ext.item.name if ext.item else 'N/A' }}</td>
                       <td>
-                        {% if ext.rent_due_date %}
-                          {{ ext.rent_due_date.strftime('%d/%m/%Y') }}
-                          {% set today = now.date() if now else '' %}
-                          {% if ext.rent_due_date < today %}
-                            <span class="badge bg-danger">Vencido</span>
-                          {% endif %}
+                        <strong>{{ rental.item.name if rental.item else 'N/A' }}</strong>
+                        <br>
+                        <small>Cantidad: {{ rental.qty }}</small>
+                      </td>
+                      <td>
+                        <span class="badge bg-danger">{{ rental.rent_due_date.strftime('%d/%m/%Y') if rental.rent_due_date else 'N/A' }}</span>
+                      </td>
+                      <td>
+                        {% if rental.rent_due_date %}
+                          <strong>{{ (now.date() - rental.rent_due_date.date()).days }} días</strong>
                         {% else %}
                           N/A
                         {% endif %}
                       </td>
                       <td>
-                        <span class="badge bg-info">{{ ext.extension_days }} días</span>
-                      </td>
-                      <td>
-                        <small class="text-muted">{{ ext.timestamp.strftime('%d/%m/%Y %H:%M') if ext.timestamp else 'N/A' }}</small>
-                      </td>
-                      <td>
-                        <form method="post" style="display: inline;">
-                          <button formaction="/admin/rental-extensions/{{ ext.id }}/approve" type="submit" class="btn btn-sm btn-success" onclick="return confirm('¿Aprobar esta extensión?')">
-                            ✓ Aprobar
-                          </button>
-                          <button formaction="/admin/rental-extensions/{{ ext.id }}/reject" type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Rechazar esta solicitud?')">
-                            ✗ Rechazar
-                          </button>
+                        <form method="post" action="{{ url_for('admin.extend_rental', transaction_id=rental.id) }}" style="display: inline;">
+                          <div class="d-flex gap-1">
+                            <input type="number" name="days" min="1" max="30" value="7" class="form-control form-control-sm" style="width: 70px;" placeholder="días">
+                            <button type="submit" class="btn btn-sm btn-success">Extender</button>
+                          </div>
                         </form>
                       </td>
                     </tr>
@@ -105,46 +105,112 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Paginación -->
+            {% if pending_extensions.pages > 1 %}
+              <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                  {% if pending_extensions.has_prev %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page=1">Primera</a>
+                    </li>
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ pending_extensions.prev_num }}">Anterior</a>
+                    </li>
+                  {% endif %}
+                  
+                  {% for page_num in pending_extensions.iter_pages() %}
+                    {% if page_num %}
+                      {% if page_num == pending_extensions.page %}
+                        <li class="page-item active">
+                          <span class="page-link">{{ page_num }}</span>
+                        </li>
+                      {% else %}
+                        <li class="page-item">
+                          <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                        </li>
+                      {% endif %}
+                    {% endif %}
+                  {% endfor %}
+                  
+                  {% if pending_extensions.has_next %}
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ pending_extensions.next_num }}">Siguiente</a>
+                    </li>
+                    <li class="page-item">
+                      <a class="page-link" href="?page={{ pending_extensions.pages }}">Última</a>
+                    </li>
+                  {% endif %}
+                </ul>
+              </nav>
+            {% endif %}
           {% else %}
-            <div class="alert alert-info">
-              ✓ No hay solicitudes de extensión pendientes
+            <div class="alert alert-success" role="alert">
+              <strong>✓ ¡Excelente!</strong> No hay alquileres vencidos. Todos los estudiantes han devuelto o extendido sus alquileres.
             </div>
           {% endif %}
         </div>
 
-        <!-- Tab: Extensiones Aprobadas -->
+        <!-- Tab: Historial de Extensiones -->
         <div class="tab-pane fade" id="approved" role="tabpanel">
           {% if approved_extensions %}
+            <div class="alert alert-info mb-4">
+              <strong>📊 Últimas {{ approved_extensions|length }} extensiones aprobadas</strong> - Resumen de alquileres activos.
+            </div>
+            
             <div class="table-responsive">
               <table class="table table-hover">
                 <thead class="table-light">
                   <tr>
                     <th>Estudiante</th>
                     <th>Item</th>
-                    <th>Nuevo Vencimiento</th>
-                    <th>Días Agregados</th>
-                    <th>Aprobado en</th>
+                    <th>Inicio de Alquiler</th>
+                    <th>Vencimiento</th>
+                    <th>Días Restantes</th>
+                    <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {% for ext in approved_extensions %}
+                  {% for rental in approved_extensions %}
                     <tr>
                       <td>
-                        <strong>{{ ext.user.email if ext.user else 'N/A' }}</strong>
+                        <strong>{{ rental.user.email if rental.user else 'N/A' }}</strong>
+                        <br>
+                        <small class="text-muted">{{ rental.user.username if rental.user else '' }}</small>
                       </td>
-                      <td>{{ ext.item.name if ext.item else 'N/A' }}</td>
                       <td>
-                        {% if ext.rent_due_date %}
-                          <span class="badge bg-success">{{ ext.rent_due_date.strftime('%d/%m/%Y') }}</span>
+                        <strong>{{ rental.item.name if rental.item else 'N/A' }}</strong>
+                        <br>
+                        <small>Cantidad: {{ rental.qty }}</small>
+                      </td>
+                      <td>
+                        <small>{{ rental.rent_start_date.strftime('%d/%m/%Y') if rental.rent_start_date else 'N/A' }}</small>
+                      </td>
+                      <td>
+                        <strong>{{ rental.rent_due_date.strftime('%d/%m/%Y') if rental.rent_due_date else 'N/A' }}</strong>
+                      </td>
+                      <td>
+                        {% if rental.rent_due_date %}
+                          {% set dias_restantes = (rental.rent_due_date.date() - now.date()).days %}
+                          {% if dias_restantes < 0 %}
+                            <span class="badge bg-danger">{{ dias_restantes }} días (VENCIDO)</span>
+                          {% elif dias_restantes <= 3 %}
+                            <span class="badge bg-warning">{{ dias_restantes }} días</span>
+                          {% else %}
+                            <span class="badge bg-success">{{ dias_restantes }} días</span>
+                          {% endif %}
                         {% else %}
                           N/A
                         {% endif %}
                       </td>
                       <td>
-                        <strong>+{{ ext.extension_days }}</strong> días
-                      </td>
-                      <td>
-                        <small class="text-muted">{{ ext.extension_approved_at.strftime('%d/%m/%Y %H:%M') if ext.extension_approved_at else 'N/A' }}</small>
+                        {% if rental.returned %}
+                          <span class="badge bg-secondary">Devuelto</span>
+                        {% elif rental.rent_due_date and rental.rent_due_date.date() < now.date() %}
+                          <span class="badge bg-danger">Vencido</span>
+                        {% else %}
+                          <span class="badge bg-info">Activo</span>
+                        {% endif %}
                       </td>
                     </tr>
                   {% endfor %}
@@ -153,7 +219,7 @@
             </div>
           {% else %}
             <div class="alert alert-info">
-              No hay extensiones aprobadas
+              No hay alquileres activos en el sistema.
             </div>
           {% endif %}
         </div>
