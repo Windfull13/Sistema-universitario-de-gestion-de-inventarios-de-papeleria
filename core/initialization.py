@@ -59,6 +59,9 @@ def create_tables_and_seed(app: Flask, db):
             # Generate placeholder images
             _generate_placeholder_images(db)
             
+            # Generate QR codes
+            _generate_qr_codes(db)
+            
             # Seed example data
             _seed_example_data(db)
             
@@ -274,5 +277,48 @@ def _seed_example_data(db):
                 db.session.commit()
                 logger.info(f"Seeded rental extensions")
                 
+    except Exception as e:
+        logger.warning(f"Could not seed example data: {e}")
+
+
+def _generate_qr_codes(db):
+    """Generate QR codes for all items"""
+    try:
+        import segno
+        from models import Item
+        
+        qr_dir = 'static/uploads/qr'
+        os.makedirs(qr_dir, exist_ok=True)
+        
+        # Get items that need QR codes
+        items = Item.query.all()
+        
+        if items:
+            logger.info(f"Generating QR codes for {len(items)} items...")
+            generated = 0
+            
+            for item in items:
+                try:
+                    # URL pointing to item detail
+                    url = f"https://sistema-universitario-de-gestion-de.onrender.com/item/{item.id}"
+                    
+                    # Generate QR code (regular QR for long URLs)
+                    qr = segno.make(url, error='L', micro=False)
+                    
+                    # Save as PNG
+                    filename = f"{qr_dir}/item_{item.id}.png"
+                    qr.save(filename, kind='png', scale=5)
+                    generated += 1
+                    
+                except Exception as e:
+                    logger.warning(f"Could not generate QR for item {item.id}: {e}")
+            
+            if generated > 0:
+                logger.info(f"Generated {generated}/{len(items)} QR codes")
+                
+    except ImportError:
+        logger.warning("segno not available, skipping QR generation")
+    except Exception as e:
+        logger.warning(f"Could not generate QR codes: {e}")
     except Exception as e:
         logger.warning(f"Could not seed example data: {e}")

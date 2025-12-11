@@ -3,10 +3,6 @@
 Seed products into the database
 Complete list of stationery products organized by category
 """
-import os
-import sys
-from app import app, db
-from models import Item
 
 PRODUCTS = {
     "Papeles": [
